@@ -169,6 +169,7 @@ static void focus(Client *c);
 static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
 static void focusstack(const Arg *arg);
+static void focusview(const Arg *arg);
 static Atom getatomprop(Client *c, Atom prop);
 static int getrootptr(int *x, int *y);
 static long getstate(Window w);
@@ -2033,6 +2034,20 @@ updatewmhints(Client *c)
 			c->neverfocus = 0;
 		XFree(wmh);
 	}
+}
+
+void focusview(const Arg *arg)
+{
+	unsigned int newtagset = selmon->tagset[selmon->seltags];
+	if (arg->i < 0)
+		newtagset = ((unsigned int)newtagset >> -arg->i)
+			| (newtagset << (LENGTH(tags) + arg->i));
+	else
+		newtagset = ((unsigned int)newtagset << arg->i)
+			| (newtagset >> (LENGTH(tags) - arg->i));
+	selmon->tagset[selmon->seltags] = newtagset;
+	focus(NULL);
+	arrange(selmon);
 }
 
 void

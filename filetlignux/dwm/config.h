@@ -94,6 +94,7 @@ Shift+Ctrl+Alt+Right: move window and switch to next workspace\n\
  * - There is only a tiled layout but windows will launch in floating mode.
  * - Fullscreen mode for windows replaces the monocle layout.
  * - The topbar auto-hides when raised window is in fullscreen mode.
+ * - Less daunting bar arrangement.
  * - Additional window states:
  *     * raised - visible above all other windows, even if tiled.
  *     * zoomed - at the top of the stack (also applies to floating windows).
@@ -112,20 +113,10 @@ static Key keys[] = {
 	/* TODO{ MODKEY,                       XK_Return, togglefullscreen, {0} }, */
 	{ MODKEY,                       XK_F4,     killclient,     {0} },
 
-	{ MODKEY,                       XK_Return, zoom,           {0} },
-	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
-	{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
-	{ MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
-	{ MODKEY,                       XK_space,  setlayout,      {0} },
-	{ MODKEY|ControlMask,           XK_Down,   focusstack,     {.i = +1 } },
+	{ MODKEY|ControlMask,           XK_Down,   focusstack,     {.i = +1 } }, //TODO update
 	{ MODKEY|ControlMask,           XK_Up,     focusstack,     {.i = -1 } }, //TODO update
-/*	{ MODKEY|ControlMask,           XK_grave,  togglefloating, {0} },*/
-/*	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },*/
-	{ MODKEY|ShiftMask,             XK_0,      tag,            {.ui = ~0 } },
-	{ MODKEY,                       XK_comma,  focusmon,       {.i = -1 } },
-	{ MODKEY,                       XK_period, focusmon,       {.i = +1 } },
-	{ MODKEY|ShiftMask,             XK_comma,  tagmon,         {.i = -1 } },
-	{ MODKEY|ShiftMask,             XK_period, tagmon,         {.i = +1 } },
+	{ MODKEY|ControlMask,           XK_Return, zoom,           {0} }, //TODO update
+
 	TAGKEYS(                        XK_1,                      0)
 	TAGKEYS(                        XK_2,                      1)
 	TAGKEYS(                        XK_3,                      2)
@@ -135,6 +126,11 @@ static Key keys[] = {
 	TAGKEYS(                        XK_7,                      6)
 	TAGKEYS(                        XK_8,                      7)
 	TAGKEYS(                        XK_9,                      8)
+	{ MODKEY|ShiftMask,             XK_0,      tag,            {.ui = ~0 } },
+	{ MODKEY|ControlMask,           XK_Left,   focusview,      {.i = -1 } },
+	{ MODKEY|ControlMask,           XK_Right,  focusview,      {.i = +1 } },
+	{ MODKEY|ControlMask|ShiftMask, XK_Left,   tagmon,         {.i = -1 } },
+	{ MODKEY|ControlMask|ShiftMask, XK_Right,  tagmon,         {.i = +1 } },
 };
 
 /* button definitions */
