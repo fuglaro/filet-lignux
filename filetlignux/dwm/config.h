@@ -12,7 +12,7 @@ static const char col_gray2[]       = "#444444";
 static const char col_gray3[]       = "#bbbbbb";
 static const char col_gray4[]       = "#eeeeee";
 static const char col_cyan[]        = "#005577";
-static const char col_red[]         = "#ff0000";
+static const char col_red[]         = "#990000";
 static const char *colors[][3]      = {
 	/*               fg         bg         border   */
 	[SchemeNorm] = { col_gray3, col_gray1, col_gray2 },
@@ -24,15 +24,11 @@ static const char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
 
 static const Rule rules[] = {
 	/* xprop(1):
-	 *	WM_CLASS(STRING) = instance, class
-	 *	WM_NAME(STRING) = title
+	 *      WM_CLASS(STRING) = instance, class
+	 *      WM_NAME(STRING) = title
 	 */
 	/* class      instance    title       tags mask     isfloating   monitor */
-	/* eg:
-	{ "Gimp",     NULL,       NULL,       0,            1,           -1 },
-	{ "Firefox",  NULL,       NULL,       1 << 8,       0,           -1 },
-	*/
-	{ "echo",     NULL,       NULL,       0,            0,           -1 },
+	{  NULL,      NULL,       NULL,       0,            1,           -1 },
 };
 
 /* layout(s) */
@@ -42,9 +38,7 @@ static const int resizehints = 1;    /* 1 means respect size hints in tiled resi
 
 static const Layout layouts[] = {
 	/* symbol     arrange function */
-	{ "[]=",      tile },    /* first entry is default */
-	{ "><>",      NULL },    /* no layout function means floating behavior */
-	{ "[M]",      monocle },
+	{ ">",      tile },    /* first entry is default */
 };
 
 /* key definitions */
@@ -55,54 +49,76 @@ static const Layout layouts[] = {
 	{ MODKEY|ShiftMask,             KEY,      tag,            {.ui = 1 << TAG} }, \
 	{ MODKEY|ControlMask|ShiftMask, KEY,      toggletag,      {.ui = 1 << TAG} },
 
-/* helper for spawning shell commands in the pre dwm-5.0 fashion */
-#define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
-
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
-static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
+static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-i", "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
 static const char *termcmd[]  = { "st", NULL };
+static const char *lockcmd[]  = { "slock", NULL };
+static const char *helpcmd[]  = { "st", "-e", "bash", "-c", "printf 'FiletLignux Controls\n\
+               Alt+`: launcher\n\
+         Shift+Alt+`: open terminal\n\
+        Shift+Alt+F4: lock\n\
+   Shift+Ctrl+Alt+F4: quit\n\
+         Alt+LButton: move window\n\
+         Alt+MButton: tile window (raise and zoom)\n\
+         Alt+RButton: resize window\n\
+             LButton: raise window (zoom if not tiled)\n\
+\n\
+             Alt+Tab: next window (raise and focus, then zoom on release)\n\
+       Shift+Alt+Tab: previous window (raise and focus, then zoom on release)\n\
+           Alt+Enter: fullscreen window\n\
+              Alt+F4: close window\n\
+\n\
+       Ctrl+Alt+Down: next window (raise and focus)\n\
+         Ctrl+Alt+Up: previous window (raise and focus)\n\
+      Ctrl+Alt+Enter: raise and zoom window\n\
+\n\
+           Alt+[1-9]: switch workspace\n\
+      Ctrl+Alt+[1-9]: combine workspace\n\
+     Shift+Alt+[1-9]: move window to workspace\n\
+Shift+Ctrl+Alt+[1-9]: add window to workspace\n\
+         Shift+Alt+0: add window to all workspaces\n\
+       Ctrl+Alt+Left: switch to previous workspace\n\
+      Ctrl+Alt+Right: switch to next workspace\n\
+ Shift+Ctrl+Alt+Left: move window and switch to previous workspace\n\
+Shift+Ctrl+Alt+Right: move window and switch to next workspace\n\
+'; read -s -n 1", NULL };
 
-/*                Alt+`: launcher
- *          Shift+Alt+`: open terminal
- *          Alt+LButton: move window
- *          Alt+MButton: tile window
- *          Alt+RButton: resize window
- *               Alt+F4: close window
- *         Shift+Alt+F4: lock
- *    Shift+Ctrl+Alt+F4: quit
- *              Alt+Tab: next window
+/* This is a minimal fork to dwm.
  *
- *            Alt+[1-9]: switch workspace
- *       Ctrl+Alt+[1-9]: combine workspace
- *      Shift+Alt+[1-9]: move window to workspace
- * Shift+Ctrl+Alt+[1-9]: add window to workspace
- *          Shift+Alt+0: add window to all workspaces
-
- *            Alt+F1: switch layout
- *      Shift+Alt+F1: hide bar
+ * Changes to dwm focus on default behaviour being more familiar
+ * to less-leet window managers, while still supporting all
+ * productivity boosting behaviours. Consider this like a gateway
+ * drug to the beauty of dwm.
+ *
+ * - There is only a tiled layout but windows will launch in floating mode.
+ * - Fullscreen mode for windows replaces the monocle layout.
+ * - The topbar auto-hides when raised window is in fullscreen mode.
+ * - Additional window states:
+ *     * raised - visible above all other windows, even if tiled.
+ *     * zoomed - at the top of the stack (also applies to floating windows).
+ * - Changed bindings to be closer to less-leet window managers.
 */
 
 static Key keys[] = {
 	/* modifier                     key        function        argument */
 	{ MODKEY,                       XK_grave,  spawn,          {.v = dmenucmd } },
 	{ MODKEY|ShiftMask,             XK_grave,  spawn,          {.v = termcmd } },
-	{ MODKEY|ShiftMask,             XK_F1,     togglebar,      {0} },
+	{ MODKEY|ShiftMask,             XK_F4,     spawn,          {.v = lockcmd} },
+	{ MODKEY|ControlMask|ShiftMask, XK_F4,     quit,           {0} },
 
-
-	{ MODKEY,                       XK_j,      focusstack,     {.i = +1 } },
-	{ MODKEY,                       XK_k,      focusstack,     {.i = -1 } },
-	{ MODKEY,                       XK_i,      incnmaster,     {.i = +1 } },
-	{ MODKEY,                       XK_d,      incnmaster,     {.i = -1 } },
-	{ MODKEY,                       XK_h,      setmfact,       {.f = -0.05} },
-	{ MODKEY,                       XK_l,      setmfact,       {.f = +0.05} },
-	{ MODKEY,                       XK_Return, zoom,           {0} },
-	{ MODKEY,                       XK_Tab,    view,           {0} },
+	{ MODKEY,                       XK_Tab,    focusstack,     {.i = +1 } }, //TODO update
+	{ MODKEY|ShiftMask,             XK_Tab,    focusstack,     {.i = -1 } }, //TODO update
+	/* TODO{ MODKEY,                       XK_Return, togglefullscreen, {0} }, */
 	{ MODKEY,                       XK_F4,     killclient,     {0} },
+
+	{ MODKEY,                       XK_Return, zoom,           {0} },
 	{ MODKEY,                       XK_t,      setlayout,      {.v = &layouts[0]} },
 	{ MODKEY,                       XK_f,      setlayout,      {.v = &layouts[1]} },
 	{ MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
 	{ MODKEY,                       XK_space,  setlayout,      {0} },
+	{ MODKEY|ControlMask,           XK_Down,   focusstack,     {.i = +1 } },
+	{ MODKEY|ControlMask,           XK_Up,     focusstack,     {.i = -1 } }, //TODO update
 /*	{ MODKEY|ControlMask,           XK_grave,  togglefloating, {0} },*/
 /*	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },*/
 	{ MODKEY|ShiftMask,             XK_0,      tag,            {.ui = ~0 } },
@@ -119,20 +135,26 @@ static Key keys[] = {
 	TAGKEYS(                        XK_7,                      6)
 	TAGKEYS(                        XK_8,                      7)
 	TAGKEYS(                        XK_9,                      8)
-	{ MODKEY|ControlMask|ShiftMask, XK_F4,     quit,           {0} },
 };
 
 /* button definitions */
 /* click can be ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle, ClkClientWin, or ClkRootWin */
 static Button buttons[] = {
 	/* click                event mask      button          function        argument */
-	{ ClkLtSymbol,          0,              Button1,        setlayout,      {0} },
-	{ ClkLtSymbol,          0,              Button3,        setlayout,      {.v = &layouts[2]} },
-	{ ClkWinTitle,          0,              Button2,        zoom,           {0} },
-	{ ClkStatusText,        0,              Button2,        spawn,          {.v = termcmd } },
+
+	/* TODO { ClkClientWin,         0,              Button1,        focusclick,      {0} }, */
 	{ ClkClientWin,         MODKEY,         Button1,        movemouse,      {0} },
 	{ ClkClientWin,         MODKEY,         Button2,        togglefloating, {0} },
 	{ ClkClientWin,         MODKEY,         Button3,        resizemouse,    {0} },
+
+	{ ClkWinTitle,          0,              Button1,        spawn,          {.v = dmenucmd } },
+	{ ClkStatusText,        0,              Button1,        spawn,          {.v = dmenucmd } },
+	{ ClkLtSymbol,          0,              Button1,        spawn,          {.v = dmenucmd } },
+	{ ClkWinTitle,          0,              Button2,        spawn,          {.v = termcmd } },
+	{ ClkStatusText,        0,              Button2,        spawn,          {.v = termcmd } },
+	{ ClkLtSymbol,          0,              Button2,        spawn,          {.v = termcmd } },
+	{ ClkStatusText,        0,              Button3,        spawn,          {.v = helpcmd } },
+
 	{ ClkTagBar,            0,              Button1,        view,           {0} },
 	{ ClkTagBar,            0,              Button3,        toggleview,     {0} },
 	{ ClkTagBar,            MODKEY,         Button1,        tag,            {0} },
