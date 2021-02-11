@@ -1,0 +1,7 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=filet lignux
+Comment=Lean and palatable
+Exec=~/.config/filetlignux/dwm/dwm
+Type=XSession
+
