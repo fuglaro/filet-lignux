@@ -129,8 +129,8 @@ static Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_0,      tag,            {.ui = ~0 } },
 	{ MODKEY|ControlMask,           XK_Left,   focusview,      {.i = -1 } },
 	{ MODKEY|ControlMask,           XK_Right,  focusview,      {.i = +1 } },
-	{ MODKEY|ControlMask|ShiftMask, XK_Left,   tagmon,         {.i = -1 } },
-	{ MODKEY|ControlMask|ShiftMask, XK_Right,  tagmon,         {.i = +1 } },
+	{ MODKEY|ControlMask|ShiftMask, XK_Left,   moveview,       {.i = -1 } },
+	{ MODKEY|ControlMask|ShiftMask, XK_Right,  moveview,       {.i = +1 } },
 };
 
 /* button definitions */

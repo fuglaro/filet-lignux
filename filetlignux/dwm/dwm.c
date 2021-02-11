@@ -170,6 +170,7 @@ static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
 static void focusstack(const Arg *arg);
 static void focusview(const Arg *arg);
+static void moveview(const Arg *arg);
 static Atom getatomprop(Client *c, Atom prop);
 static int getrootptr(int *x, int *y);
 static long getstate(Window w);
@@ -2036,16 +2037,29 @@ updatewmhints(Client *c)
 	}
 }
 
+unsigned int shiftviews(unsigned int v, int i) {
+	if (i < 0)
+		v = (v >> -i) | (v << (LENGTH(tags) + i));
+	else
+		v = (v << i) | (v >> (LENGTH(tags) - i));
+	return v;
+}
+
 void focusview(const Arg *arg)
 {
-	unsigned int newtagset = selmon->tagset[selmon->seltags];
-	if (arg->i < 0)
-		newtagset = ((unsigned int)newtagset >> -arg->i)
-			| (newtagset << (LENGTH(tags) + arg->i));
-	else
-		newtagset = ((unsigned int)newtagset << arg->i)
-			| (newtagset >> (LENGTH(tags) - arg->i));
-	selmon->tagset[selmon->seltags] = newtagset;
+	selmon->tagset[selmon->seltags] = shiftviews(
+		selmon->tagset[selmon->seltags], arg->i);
+	focus(NULL);
+	arrange(selmon);
+}
+
+void moveview(const Arg *arg)
+{
+	selmon->tagset[selmon->seltags] = shiftviews(
+		selmon->tagset[selmon->seltags], arg->i);
+	if (selmon->sel)
+		selmon->sel->tags = shiftviews(
+			selmon->sel->tags, arg->i);
 	focus(NULL);
 	arrange(selmon);
 }
