@@ -1374,10 +1374,7 @@ restack(Monitor *m)
 	drawbar(m);
 	if (!m->sel)
 		return;
-	if (m->sel->isfloating || !m->lt[m->sellt]->arrange) {
-		XRaiseWindow(dpy, m->sel->win);
-		m->raised = m->sel;
-	}
+	XLowerWindow(dpy, m->barwin);
 	if (m->lt[m->sellt]->arrange) {
 		wc.stack_mode = Below;
 		wc.sibling = m->barwin;
@@ -1387,6 +1384,9 @@ restack(Monitor *m)
 				wc.sibling = c->win;
 			}
 	}
+	XRaiseWindow(dpy, m->barwin);
+	XRaiseWindow(dpy, m->sel->win);
+	m->raised = m->sel;
 	XSync(dpy, False);
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
 }
