@@ -98,7 +98,7 @@ Shift+Ctrl+Alt+Right: move window and switch to next workspace\n\
  * - The topbar auto-hides when raised window is in fullscreen mode. TODO
  * - Less daunting bar arrangement.
  * - Additional window states:
- *     * raised - visible above all other windows, even if tiled. TODO
+ *     * raised - visible above all other windows, even if tiled.
  *     * zoomed - at the top of the stack (also applies to floating windows). TODO
  * - Changed bindings to be closer to less-leet window managers. TODO
 */
@@ -115,8 +115,8 @@ static Key keys[] = {
 	/* TODO{ MODKEY,                       XK_Return, togglefullscreen, {0} }, */
 	{ MODKEY,                       XK_F4,     killclient,     {0} },
 
-	{ MODKEY|ControlMask,           XK_Down,   focusstack,     {.i = +1 } }, //TODO update
-	{ MODKEY|ControlMask,           XK_Up,     focusstack,     {.i = -1 } }, //TODO update
+	{ MODKEY|ControlMask,           XK_Down,   focusstack,     {.i = +1 } },
+	{ MODKEY|ControlMask,           XK_Up,     focusstack,     {.i = -1 } },
 	{ MODKEY|ControlMask,           XK_Return, zoom,           {0} }, //TODO update
 
 	TAGKEYS(                        XK_1,                      0)
