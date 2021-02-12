@@ -1994,15 +1994,15 @@ updatewmhints(Client *c)
 	}
 }
 
-unsigned int shiftviews(unsigned int v, int i) {
+unsigned int
+shiftviews(unsigned int v, int i) {
 	if (i < 0)
-		v = (v >> -i) | (v << (LENGTH(tags) + i));
-	else
-		v = (v << i) | (v >> (LENGTH(tags) - i));
-	return v;
+		return (v >> -i) | (v << (LENGTH(tags) + i));
+	return (v << i) | (v >> (LENGTH(tags) - i));
 }
 
-void focusview(const Arg *arg)
+void
+focusview(const Arg *arg)
 {
 	selmon->tagset[selmon->seltags] = shiftviews(
 		selmon->tagset[selmon->seltags], arg->i);
@@ -2010,15 +2010,13 @@ void focusview(const Arg *arg)
 	arrange(selmon);
 }
 
-void moveview(const Arg *arg)
+void
+moveview(const Arg *arg)
 {
-	selmon->tagset[selmon->seltags] = shiftviews(
-		selmon->tagset[selmon->seltags], arg->i);
 	if (selmon->sel)
 		selmon->sel->tags = shiftviews(
 			selmon->sel->tags, arg->i);
-	focus(NULL);
-	arrange(selmon);
+	focusview(arg);
 }
 
 void
