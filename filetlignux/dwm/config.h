@@ -49,7 +49,7 @@ static const char *helpcmd[]  = { "st", "-g80x30", "-t", "FiletLignux Controls",
         Shift+Alt+F4: lock\n\
    Shift+Ctrl+Alt+F4: quit\n\
          Alt+LButton: move window\n\
-         Alt+MButton: tile window (raise and zoom)\n\
+         Alt+MButton: tile window (raised)\n\
          Alt+RButton: resize window\n\
              LButton: raise window (zoom if not tiled)\n\
 \n\
@@ -104,7 +104,7 @@ static Key keys[] = {
 
 	{ MODKEY|ControlMask,           XK_Down,   focusstack,     {.i = +1 } },
 	{ MODKEY|ControlMask,           XK_Up,     focusstack,     {.i = -1 } },
-	{ MODKEY|ControlMask,           XK_Return, zoom,           {0} }, //TODO update
+	{ MODKEY|ControlMask,           XK_Return, zoom,           {0} },
 
 	TAGKEYS(                        XK_1,                      0)
 	TAGKEYS(                        XK_2,                      1)

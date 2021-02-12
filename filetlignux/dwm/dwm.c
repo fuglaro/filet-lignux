@@ -380,6 +380,7 @@ buttonpress(XEvent *e)
 			click = ClkWinTitle;
 	} else if ((c = wintoclient(ev->window))) {
 		focus(c);
+		if (c->isfloating) pop(c);
 		restack(selmon);
 		grabbuttons(c, 0);
 		grabbuttons(c, 1);
@@ -2010,12 +2011,7 @@ void
 zoom(const Arg *arg)
 {
 	Client *c = selmon->sel;
-
-	if (selmon->sel && selmon->sel->isfloating)
-		return;
-	if (c == nexttiled(selmon->clients))
-		if (!c || !(c = nexttiled(c->next)))
-			return;
+	if (!c || c == selmon->clients) return;
 	pop(c);
 }
 
