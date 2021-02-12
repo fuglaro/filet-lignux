@@ -27,8 +27,9 @@ static const Rule rules[] = {
 	 *      WM_CLASS(STRING) = instance, class
 	 *      WM_NAME(STRING) = title
 	 */
-	/* class      instance    title       tags mask     isfloating   monitor */
-	{  NULL,      NULL,       NULL,       0,            1,           -1 },
+	/* class instance title                   tags mask isfloating  monitor */
+	{  NULL, NULL,    NULL,                   0,        1,          -1 },
+	{  NULL, NULL,    "FiletLignux Controls", 0,        0,          -1 },
 };
 
 /* layout(s) */
@@ -54,7 +55,8 @@ static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() 
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-i", "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
 static const char *termcmd[]  = { "st", NULL };
 static const char *lockcmd[]  = { "slock", NULL };
-static const char *helpcmd[]  = { "st", "-e", "bash", "-c", "printf 'FiletLignux Controls\n\
+static const char *helpcmd[]  = { "st", "-t", "FiletLignux Controls", "-e",
+"bash", "-c", "printf 'FiletLignux Controls\n\
                Alt+`: launcher\n\
          Shift+Alt+`: open terminal\n\
         Shift+Alt+F4: lock\n\
@@ -92,13 +94,13 @@ Shift+Ctrl+Alt+Right: move window and switch to next workspace\n\
  * drug to the beauty of dwm.
  *
  * - There is only a tiled layout but windows will launch in floating mode.
- * - Fullscreen mode for windows replaces the monocle layout.
- * - The topbar auto-hides when raised window is in fullscreen mode.
+ * - Fullscreen mode for windows replaces the monocle layout. TODO
+ * - The topbar auto-hides when raised window is in fullscreen mode. TODO
  * - Less daunting bar arrangement.
  * - Additional window states:
- *     * raised - visible above all other windows, even if tiled.
- *     * zoomed - at the top of the stack (also applies to floating windows).
- * - Changed bindings to be closer to less-leet window managers.
+ *     * raised - visible above all other windows, even if tiled. TODO
+ *     * zoomed - at the top of the stack (also applies to floating windows). TODO
+ * - Changed bindings to be closer to less-leet window managers. TODO
 */
 
 static Key keys[] = {
@@ -143,13 +145,9 @@ static Button buttons[] = {
 	{ ClkClientWin,         MODKEY,         Button2,        togglefloating, {0} },
 	{ ClkClientWin,         MODKEY,         Button3,        resizemouse,    {0} },
 
-	{ ClkWinTitle,          0,              Button1,        spawn,          {.v = dmenucmd } },
-	{ ClkStatusText,        0,              Button1,        spawn,          {.v = dmenucmd } },
 	{ ClkLtSymbol,          0,              Button1,        spawn,          {.v = dmenucmd } },
-	{ ClkWinTitle,          0,              Button2,        spawn,          {.v = termcmd } },
-	{ ClkStatusText,        0,              Button2,        spawn,          {.v = termcmd } },
-	{ ClkLtSymbol,          0,              Button2,        spawn,          {.v = termcmd } },
-	{ ClkStatusText,        0,              Button3,        spawn,          {.v = helpcmd } },
+	{ ClkLtSymbol,          0,              Button3,        spawn,          {.v = termcmd } },
+	{ ClkStatusText,        0,              Button1,        spawn,          {.v = helpcmd } },
 
 	{ ClkTagBar,            0,              Button1,        view,           {0} },
 	{ ClkTagBar,            0,              Button3,        toggleview,     {0} },
