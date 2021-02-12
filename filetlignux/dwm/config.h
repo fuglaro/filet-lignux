@@ -89,7 +89,7 @@ Shift+Ctrl+Alt+Right: move window and switch to next workspace\n\
 /* This is a minimal fork to dwm.
  *
  * Changes to dwm focus on default behaviour being more familiar
- * to less-leet window managers, while still supporting all
+ * to users of less-leet window managers, while still supporting all
  * productivity boosting behaviours. Consider this like a gateway
  * drug to the beauty of dwm.
  *
@@ -140,7 +140,6 @@ static Key keys[] = {
 static Button buttons[] = {
 	/* click                event mask      button          function        argument */
 
-	/* TODO { ClkClientWin,         0,              Button1,        focusclick,      {0} }, */
 	{ ClkClientWin,         MODKEY,         Button1,        movemouse,      {0} },
 	{ ClkClientWin,         MODKEY,         Button2,        togglefloating, {0} },
 	{ ClkClientWin,         MODKEY,         Button3,        resizemouse,    {0} },
