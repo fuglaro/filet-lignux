@@ -21,16 +21,6 @@ static const char *colors[][3]      = {
 /* tagging */
 static const char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
 
-static const Rule rules[] = {
-	/* xprop(1):
-	 *      WM_CLASS(STRING) = instance, class
-	 *      WM_NAME(STRING) = title
-	 */
-	/* class instance title                   tags mask isfloating  monitor */
-	{  NULL, NULL,    NULL,                   0,        1,          -1 },
-	{  NULL, NULL,    "FiletLignux Controls", 0,        0,          -1 },
-};
-
 /* layout */
 static const float mfact     = 0.55; /* factor of master area size [0.05..0.95] */
 static const int nmaster     = 1;    /* number of clients in master area */
@@ -52,7 +42,7 @@ static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() 
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-i", "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
 static const char *termcmd[]  = { "st", NULL };
 static const char *lockcmd[]  = { "slock", NULL };
-static const char *helpcmd[]  = { "st", "-t", "FiletLignux Controls", "-e",
+static const char *helpcmd[]  = { "st", "-g80x30", "-t", "FiletLignux Controls", "-e",
 "bash", "-c", "printf 'FiletLignux Controls\n\
                Alt+`: launcher\n\
          Shift+Alt+`: open terminal\n\
