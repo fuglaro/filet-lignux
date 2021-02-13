@@ -150,6 +150,7 @@ static void expose(XEvent *e);
 static void focus(Client *c);
 static void focusin(XEvent *e);
 static void focusstack(const Arg *arg);
+static void grabstack(const Arg *arg);
 static void focusview(const Arg *arg);
 static void moveview(const Arg *arg);
 static Atom getatomprop(Client *c, Atom prop);
@@ -160,6 +161,7 @@ static void grabbuttons(Client *c, int focused);
 static void grabkeys(void);
 static void incnmaster(const Arg *arg);
 static void keypress(XEvent *e);
+static void keyrelease(XEvent *e);
 static void killclient(const Arg *arg);
 static void manage(Window w, XWindowAttributes *wa);
 static void mappingnotify(XEvent *e);
@@ -223,6 +225,7 @@ static int bh, blw, vw = 0;  /* bar geometry */
 static int lrpad;            /* sum of left and right padding for text */
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask = 0;
+static unsigned int stackgrabbed = 0;
 static void (*handler[LASTEvent]) (XEvent *) = {
 	[ButtonPress] = buttonpress,
 	[ClientMessage] = clientmessage,
@@ -233,6 +236,7 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 	[Expose] = expose,
 	[FocusIn] = focusin,
 	[KeyPress] = keypress,
+	[KeyRelease] = keyrelease,
 	[MappingNotify] = mappingnotify,
 	[MapRequest] = maprequest,
 	[MotionNotify] = motionnotify,
@@ -765,6 +769,13 @@ focusstack(const Arg *arg)
 	}
 }
 
+void
+grabstack(const Arg *arg)
+{
+	stackgrabbed = 1;
+	focusstack(arg);
+}
+
 Atom
 getatomprop(Client *c, Atom prop)
 {
@@ -875,6 +886,9 @@ grabkeys(void)
 				for (j = 0; j < LENGTH(modifiers); j++)
 					XGrabKey(dpy, code, keys[i].mod | modifiers[j], root,
 						True, GrabModeAsync, GrabModeAsync);
+		for (j = 0; j < LENGTH(modifiers); j++)
+			XGrabKey(dpy, XKeysymToKeycode(dpy, grabstackrelease), modifiers[j],
+				root, True, GrabModeAsync, GrabModeAsync);
 	}
 }
 
@@ -911,6 +925,16 @@ keypress(XEvent *e)
 		&& CLEANMASK(keys[i].mod) == CLEANMASK(ev->state)
 		&& keys[i].func)
 			keys[i].func(&(keys[i].arg));
+}
+
+void
+keyrelease(XEvent *e)
+{
+	if (stackgrabbed && grabstackrelease
+		== XKeycodeToKeysym(dpy, (KeyCode)e->xkey.keycode, 0)) {
+		pop(selmon->sel);
+		stackgrabbed = 0;
+	}
 }
 
 void
