@@ -2,7 +2,7 @@
 
 # Install base code.
 mkdir -p ~/.config
-rsync -a filetlignux/ ~/.config/filetlignux
+rsync -a --delete filetlignux/ ~/.config/filetlignux
 
 # Install Xorg color scheme.
 touch ~/.xprofile
