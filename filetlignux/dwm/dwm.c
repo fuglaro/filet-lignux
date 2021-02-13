@@ -421,6 +421,7 @@ cleanup(void)
 		while (m->stack)
 			unmanage(m->stack, 0);
 	XUngrabKey(dpy, AnyKey, AnyModifier, root);
+	XUngrabKeyboard(dpy, CurrentTime);
 	while (mons)
 		cleanupmon(mons);
 	for (i = 0; i < CurLast; i++)
@@ -1079,10 +1080,12 @@ movemouse(const Arg *arg)
 	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
 		None, cursor[CurMove]->cursor, CurrentTime) != GrabSuccess)
 		return;
+	XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
 	if (!getrootptr(&x, &y))
 		return;
 	do {
-		XMaskEvent(dpy, MOUSEMASK|ExposureMask|SubstructureRedirectMask, &ev);
+		XMaskEvent(dpy,
+			MOUSEMASK|ExposureMask|SubstructureRedirectMask|KeyRelease, &ev);
 		switch(ev.type) {
 		case ConfigureRequest:
 		case Expose:
@@ -1111,8 +1114,9 @@ movemouse(const Arg *arg)
 				resize(c, nx, ny, c->w, c->h, 1);
 			break;
 		}
-	} while (ev.type != ButtonRelease);
+	} while (ev.type != ButtonRelease && ev.type != KeyRelease);
 	XUngrabPointer(dpy, CurrentTime);
+	XUngrabKeyboard(dpy, CurrentTime);
 	if ((m = recttomon(c->x, c->y, c->w, c->h)) != selmon) {
 		sendmon(c, m);
 		selmon = m;
@@ -1240,9 +1244,11 @@ resizemouse(const Arg *arg)
 	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
 		None, cursor[CurResize]->cursor, CurrentTime) != GrabSuccess)
 		return;
+	XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
 	XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w + c->bw - 1, c->h + c->bw - 1);
 	do {
-		XMaskEvent(dpy, MOUSEMASK|ExposureMask|SubstructureRedirectMask, &ev);
+		XMaskEvent(dpy,
+			MOUSEMASK|ExposureMask|SubstructureRedirectMask|KeyRelease, &ev);
 		switch(ev.type) {
 		case ConfigureRequest:
 		case Expose:
@@ -1267,9 +1273,11 @@ resizemouse(const Arg *arg)
 				resize(c, c->x, c->y, nw, nh, 1);
 			break;
 		}
-	} while (ev.type != ButtonRelease);
+	} while (ev.type != ButtonRelease && ev.type != KeyRelease);
 	XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w + c->bw - 1, c->h + c->bw - 1);
 	XUngrabPointer(dpy, CurrentTime);
+	XUngrabKeyboard(dpy, CurrentTime);
+
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
 	if ((m = recttomon(c->x, c->y, c->w, c->h)) != selmon) {
 		sendmon(c, m);
