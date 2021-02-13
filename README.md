@@ -5,6 +5,8 @@ A developer's linux configuration - a palatable lean slice.
 
 We stand on the shoulders of giants. They own this, far more than I do.
 
+https://github.com
 https://github.com/torvalds/linux
-https://ethanschoonover.com/solarized/
 https://dwm.suckless.org/
+https://st.suckless.org/
+https://st.suckless.org/patches/nordtheme/

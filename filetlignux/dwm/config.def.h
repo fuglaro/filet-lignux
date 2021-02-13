@@ -49,9 +49,9 @@ static const char lsymbol[] = ">";
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[] = { "dmenu_run", "-p", ">", "-m", dmenumon, "-i", "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
-static const char *termcmd[]  = { "st", NULL };
+static const char *termcmd[]  = { "~/.config/filetlignux/st/st", NULL };
 static const char *lockcmd[]  = { "slock", NULL };
-static const char *helpcmd[]  = { "st",
+static const char *helpcmd[]  = { "~/.config/filetlignux/st/st",
 "-g80x30", "-t", "FiletLignux Controls", "-e",
 "bash", "-c", "printf 'FiletLignux Controls\n\
                Alt+`: launcher\n\
