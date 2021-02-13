@@ -99,7 +99,7 @@ static Key keys[] = {
 
 	{ MODKEY,                       XK_Tab,    focusstack,     {.i = +1 } }, //TODO update
 	{ MODKEY|ShiftMask,             XK_Tab,    focusstack,     {.i = -1 } }, //TODO update
-	/* TODO{ MODKEY,                       XK_Return, togglefullscreen, {0} }, */
+	{ MODKEY,                       XK_Return, togglefullscreen, {0} },
 	{ MODKEY,                       XK_F4,     killclient,     {0} },
 
 	{ MODKEY|ControlMask,           XK_Down,   focusstack,     {.i = +1 } },
