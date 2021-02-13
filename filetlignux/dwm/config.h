@@ -90,6 +90,7 @@ Shift+Ctrl+Alt+Right: move window and switch to next workspace\n\
 	{ MODKEY|ShiftMask,             KEY,      tag,            {.ui = 1 << TAG} }, \
 	{ MODKEY|ControlMask|ShiftMask, KEY,      toggletag,      {.ui = 1 << TAG} },
 
+static const KeySym grabstackrelease = XK_Alt_L;
 static Key keys[] = {
 	/* modifier                     key        function        argument */
 	{ MODKEY,                       XK_grave,  spawn,          {.v = dmenucmd } },
@@ -97,8 +98,8 @@ static Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_F4,     spawn,          {.v = lockcmd} },
 	{ MODKEY|ControlMask|ShiftMask, XK_F4,     quit,           {0} },
 
-	{ MODKEY,                       XK_Tab,    focusstack,     {.i = +1 } }, //TODO update
-	{ MODKEY|ShiftMask,             XK_Tab,    focusstack,     {.i = -1 } }, //TODO update
+	{ MODKEY,                       XK_Tab,    grabstack,      {.i = +1 } },
+	{ MODKEY|ShiftMask,             XK_Tab,    grabstack,      {.i = -1 } },
 	{ MODKEY,                       XK_Return, togglefullscreen, {0} },
 	{ MODKEY,                       XK_F4,     killclient,     {0} },
 
