@@ -772,17 +772,11 @@ focusstack(const Arg *arg)
 void
 grabstack(const Arg *arg)
 {
-	updatenumlockmask();
-	{
-		int i;
-		unsigned int modifiers[] = {
-			0, LockMask, numlockmask, numlockmask|LockMask };
-		for (i = 0; i < LENGTH(modifiers); i++)
-			XGrabKey(dpy, XKeysymToKeycode(dpy, grabstackrelease), modifiers[i],
-				root, True, GrabModeAsync, GrabModeAsync);
-		stackgrabbed = 1;
-		focusstack(arg);
-	}
+	if (!stackgrabbed)
+		XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync,
+			CurrentTime);
+	stackgrabbed = 1;
+	focusstack(arg);
 }
 
 Atom
@@ -938,16 +932,8 @@ keyrelease(XEvent *e)
 {
 	if (stackgrabbed && grabstackrelease
 		== XKeycodeToKeysym(dpy, (KeyCode)e->xkey.keycode, 0)) {
-		pop(selmon->sel);
-		updatenumlockmask();
-		{
-			int i;
-			unsigned int modifiers[] = {
-				0, LockMask, numlockmask, numlockmask|LockMask };
-			for (i = 0; i < LENGTH(modifiers); i++)
-				XUngrabKey(dpy, XKeysymToKeycode(dpy, grabstackrelease), modifiers[i],
-					root);
-		}
+		if (selmon->sel) pop(selmon->sel);
+		XUngrabKeyboard(dpy, CurrentTime);
 		stackgrabbed = 0;
 	}
 }
