@@ -1,0 +1,5 @@
+#!/bin/bash
+
+export PATH=~/.config/filetlignux/bin:${PATH}
+
+~/.config/filetlignux/dwm/dwm
