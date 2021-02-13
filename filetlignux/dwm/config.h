@@ -1,5 +1,22 @@
 /* See LICENSE file for copyright and license details. */
 
+/* This is a minimal fork to dwm.
+ *
+ * Changes to dwm focus on default behaviour being more familiar
+ * to users of less-leet window managers, while still supporting all
+ * productivity boosting behaviours. Consider this like a gateway
+ * drug to the beauty of dwm.
+ *
+ * - There is only a tiled layout but windows will launch in floating mode.
+ * - Fullscreen mode for windows replaces the monocle layout.
+ * - Less daunting bar arrangement.
+ * - Additional window states:
+ *     * raised - visible above all other windows, even if tiled.
+ *     * zoomed - at the top of the stack (also applies to floating windows).
+ * - Changed bindings to be closer to less-leet window managers.
+ *     * Alt+Tab combos raise windows temporarily, and then zoom on release.
+*/
+
 /* appearance */
 static const unsigned int borderpx  = 1;        /* border pixel of windows */
 static const unsigned int snap      = 8;       /* snap pixel */
@@ -28,14 +45,6 @@ static const int resizehints = 1;    /* 1 means respect size hints in tiled resi
 
 /* launcher symbol */
 static const char lsymbol[] = ">";
-
-/* key definitions */
-#define MODKEY Mod1Mask
-#define TAGKEYS(KEY,TAG) \
-	{ MODKEY,                       KEY,      view,           {.ui = 1 << TAG} }, \
-	{ MODKEY|ControlMask,           KEY,      toggleview,     {.ui = 1 << TAG} }, \
-	{ MODKEY|ShiftMask,             KEY,      tag,            {.ui = 1 << TAG} }, \
-	{ MODKEY|ControlMask|ShiftMask, KEY,      toggletag,      {.ui = 1 << TAG} },
 
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
@@ -73,22 +82,13 @@ Shift+Ctrl+Alt+[1-9]: add window to workspace\n\
 Shift+Ctrl+Alt+Right: move window and switch to next workspace\n\
 '; read -s -n 1", NULL };
 
-/* This is a minimal fork to dwm.
- *
- * Changes to dwm focus on default behaviour being more familiar
- * to users of less-leet window managers, while still supporting all
- * productivity boosting behaviours. Consider this like a gateway
- * drug to the beauty of dwm.
- *
- * - There is only a tiled layout but windows will launch in floating mode.
- * - Fullscreen mode for windows replaces the monocle layout. TODO
- * - The topbar auto-hides when raised window is in fullscreen mode. TODO
- * - Less daunting bar arrangement.
- * - Additional window states:
- *     * raised - visible above all other windows, even if tiled.
- *     * zoomed - at the top of the stack (also applies to floating windows). TODO
- * - Changed bindings to be closer to less-leet window managers. TODO
-*/
+/* key definitions */
+#define MODKEY Mod1Mask
+#define TAGKEYS(KEY,TAG) \
+	{ MODKEY,                       KEY,      view,           {.ui = 1 << TAG} }, \
+	{ MODKEY|ControlMask,           KEY,      toggleview,     {.ui = 1 << TAG} }, \
+	{ MODKEY|ShiftMask,             KEY,      tag,            {.ui = 1 << TAG} }, \
+	{ MODKEY|ControlMask|ShiftMask, KEY,      toggletag,      {.ui = 1 << TAG} },
 
 static Key keys[] = {
 	/* modifier                     key        function        argument */
