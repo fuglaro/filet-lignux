@@ -382,8 +382,8 @@ buttonpress(XEvent *e)
 		else
 			click = ClkWinTitle;
 	} else if ((c = wintoclient(ev->window))) {
-		focus(c);
 		if (c->isfloating) pop(c);
+		focus(c);
 		restack(selmon);
 		grabbuttons(c, 0);
 		grabbuttons(c, 1);
