@@ -1,5 +1,10 @@
 #!/bin/bash -e
 
+# Check dependencies
+command -v rsync || (echo "need rsync"; exit 1)
+command -v conky || (echo "need conky"; exit 1)
+command -v feh || (echo "need feh"; exit 1)
+
 # Install base code.
 printf "\n\nInstalling codebase...\n\n"
 mkdir -p ~/.config
