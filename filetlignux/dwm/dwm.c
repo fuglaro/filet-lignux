@@ -923,7 +923,8 @@ keyrelease(XEvent *e)
 {
 	if (stackgrabbed && grabstackrelease
 		== XKeycodeToKeysym(dpy, (KeyCode)e->xkey.keycode, 0)) {
-		if (selmon->sel) pop(selmon->sel);
+		if (selmon->sel)
+			pop(selmon->sel);
 		XUngrabKeyboard(dpy, CurrentTime);
 		stackgrabbed = 0;
 	}
