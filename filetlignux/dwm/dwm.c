@@ -156,7 +156,7 @@ static Atom getatomprop(Client *c, Atom prop);
 static int getrootptr(int *x, int *y);
 static long getstate(Window w);
 static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
-static void grabbuttons(Client *c, int focused);
+static void grabbuttons(Client *c);
 static void grabkeys(void);
 static void keypress(XEvent *e);
 static void keyrelease(XEvent *e);
@@ -325,6 +325,11 @@ applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact)
 void
 arrange(Monitor *m)
 {
+	int di;
+	unsigned int dui;
+	Window dummy;
+	Window cw;
+
 	if (m)
 		showhide(m->stack);
 	else for (m = mons; m; m = m->next)
@@ -334,6 +339,13 @@ arrange(Monitor *m)
 		restack(m);
 	} else for (m = mons; m; m = m->next)
 		tile(m);
+	if (m == selmon) {
+		XQueryPointer(dpy, root, &dummy, &cw, &di, &di, &di, &di, &dui);
+		if (cw)
+			grabbuttons(wintoclient(cw));
+		else if (selmon->sel)
+			grabbuttons(selmon->sel);
+	}
 }
 
 void
@@ -385,8 +397,7 @@ buttonpress(XEvent *e)
 		if (c->isfloating) pop(c);
 		focus(c);
 		restack(selmon);
-		grabbuttons(c, 0);
-		grabbuttons(c, 1);
+		grabbuttons(c);
 		XAllowEvents(dpy, ReplayPointer, CurrentTime);
 		click = ClkClientWin;
 	}
@@ -719,7 +730,7 @@ focus(Client *c)
 			seturgent(c, 0);
 		detachstack(c);
 		attachstack(c);
-		grabbuttons(c, 1);
+		grabbuttons(c);
 		XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
 		setfocus(c);
 	} else {
@@ -847,14 +858,14 @@ gettextprop(Window w, Atom atom, char *text, unsigned int size)
 }
 
 void
-grabbuttons(Client *c, int focused)
+grabbuttons(Client *c)
 {
 	updatenumlockmask();
 	{
 		unsigned int i, j;
 		unsigned int modifiers[] = { 0, LockMask, numlockmask, numlockmask|LockMask };
 		XUngrabButton(dpy, AnyButton, AnyModifier, c->win);
-		if (!focused)
+		if (c != selmon->clients)
 			XGrabButton(dpy, AnyButton, AnyModifier, c->win, False,
 				BUTTONMASK, GrabModeSync, GrabModeSync, None, None);
 		for (i = 0; i < LENGTH(buttons); i++)
@@ -991,7 +1002,6 @@ manage(Window w, XWindowAttributes *wa)
 	updatesizehints(c);
 	updatewmhints(c);
 	XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask);
-	grabbuttons(c, 0);
 	if (!c->isfloating)
 		c->isfloating = c->oldstate = trans != None || c->isfixed;
 	if (c->isfloating) {
@@ -1000,6 +1010,7 @@ manage(Window w, XWindowAttributes *wa)
 	}
 	attach(c);
 	attachstack(c);
+	grabbuttons(c);
 	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32, PropModeAppend,
 		(unsigned char *) &(c->win), 1);
 	XMoveResizeWindow(dpy, c->win, c->x + 2 * sw, c->y, c->w, c->h); /* some windows require this */
@@ -1655,7 +1666,6 @@ unfocus(Client *c, int setfocus)
 {
 	if (!c)
 		return;
-	grabbuttons(c, 0);
 	XSetWindowBorder(dpy, c->win, scheme[SchemeNorm][ColBorder].pixel);
 	if (setfocus) {
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
