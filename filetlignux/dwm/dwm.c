@@ -223,6 +223,7 @@ static int lrpad;            /* sum of left and right padding for text */
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask = 0;
 static unsigned int stackgrabbed = 0;
+static unsigned int grabguard = 0;
 static void (*handler[LASTEvent]) (XEvent *) = {
 	[ButtonPress] = buttonpress,
 	[ClientMessage] = clientmessage,
@@ -1060,6 +1061,8 @@ movemouse(const Arg *arg)
 	XEvent ev;
 	Time lasttime = 0;
 
+	if (grabguard)
+		return;
 	if (!(c = selmon->sel))
 		return;
 	if (c->isfullscreen) /* no support moving fullscreen windows by mouse */
@@ -1073,6 +1076,7 @@ movemouse(const Arg *arg)
 	XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
 	if (!getrootptr(&x, &y))
 		return;
+	grabguard = 1;
 	do {
 		XMaskEvent(dpy,
 			MOUSEMASK|ExposureMask|SubstructureRedirectMask|KeyRelease, &ev);
@@ -1104,9 +1108,10 @@ movemouse(const Arg *arg)
 				resize(c, nx, ny, c->w, c->h, 1);
 			break;
 		}
-	} while (ev.type != ButtonRelease && ev.type != KeyRelease);
+	} while (ev.type != ButtonRelease && ev.type != KeyPress);
 	XUngrabPointer(dpy, CurrentTime);
 	XUngrabKeyboard(dpy, CurrentTime);
+	grabguard = 0;
 	if ((m = recttomon(c->x, c->y, c->w, c->h)) != selmon) {
 		sendmon(c, m);
 		selmon = m;
@@ -1224,6 +1229,8 @@ resizemouse(const Arg *arg)
 	XEvent ev;
 	Time lasttime = 0;
 
+	if (grabguard)
+		return;
 	if (!(c = selmon->sel))
 		return;
 	if (c->isfullscreen) /* no support resizing fullscreen windows by mouse */
@@ -1235,6 +1242,7 @@ resizemouse(const Arg *arg)
 		None, cursor[CurResize]->cursor, CurrentTime) != GrabSuccess)
 		return;
 	XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
+	grabguard = 1;
 	XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w + c->bw - 1, c->h + c->bw - 1);
 	do {
 		XMaskEvent(dpy,
@@ -1263,10 +1271,11 @@ resizemouse(const Arg *arg)
 				resize(c, c->x, c->y, nw, nh, 1);
 			break;
 		}
-	} while (ev.type != ButtonRelease && ev.type != KeyRelease);
+	} while (ev.type != ButtonRelease && ev.type != KeyPress);
 	XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w + c->bw - 1, c->h + c->bw - 1);
 	XUngrabPointer(dpy, CurrentTime);
 	XUngrabKeyboard(dpy, CurrentTime);
+	grabguard = 0;
 
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
 	if ((m = recttomon(c->x, c->y, c->w, c->h)) != selmon) {

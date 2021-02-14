@@ -56,8 +56,8 @@ static const char *helpcmd[]  = { "st",
 "bash", "-c", "printf 'FiletLignux Controls\n\
                Alt+`: launcher\n\
          Shift+Alt+`: open terminal\n\
-              Ctrl+`: move window with mouse\n\
-             Shift+`: resize window with mouse\n\
+             Shift+`: move window with mouse\n\
+              Ctrl+`: resize window with mouse\n\
         Ctrl+Shift+`: tile window (raised)\n\
            Alt+Enter: fullscreen window\n\
              LButton: raise window (zoom if not tiled)\n\
@@ -96,8 +96,8 @@ static Key keys[] = {
 	/* modifier                     key        function        argument */
 	{ MODKEY,                       XK_grave,  spawn,          {.v = dmenucmd } },
 	{ MODKEY|ShiftMask,             XK_grave,  spawn,          {.v = termcmd } },
-	{ ControlMask,                  XK_grave,  movemouse,      {0} },
-	{ ShiftMask,                    XK_grave,  resizemouse,    {0} },
+	{ ShiftMask,                    XK_grave,  movemouse,      {0} },
+	{ ControlMask,                  XK_grave,  resizemouse,    {0} },
 	{ ControlMask|ShiftMask,        XK_grave,  togglefloating, {0} },
 	{ MODKEY,                       XK_Return, togglefullscreen, {0} },
 	{ MODKEY,                       XK_F4,     killclient,     {0} },
