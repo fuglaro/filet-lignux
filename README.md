@@ -13,3 +13,4 @@ https://st.suckless.org/patches/nordtheme
 https://github.com/brndnmtthws/conky
 https://www.vim.org
 https://github.com/tmux/tmux
+https://www.texturex.com/fractal-textures/fractal-design-picture-wallpaper-stock-art-image-definition-free-neuron-chaos-fractal-fracture-broken-synapse-texture/
