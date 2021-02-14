@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Put executables into the environment
 export PATH=~/.config/filetlignux/bin:${PATH}
 
+# Status bar updater
+pkill -f "conky .*/statusbar\.config.*--display=$DISPLAY"
+conky -c ~/.config/filetlignux/conky/statusbar.config --display=$DISPLAY | ~/.config/filetlignux/xrootname/xrootname &
+
+# Launch the Window Manager
 ~/.config/filetlignux/dwm/dwm

@@ -4,15 +4,8 @@
 mkdir -p ~/.config
 rsync -a --delete filetlignux/ ~/.config/filetlignux
 
-# Build dwm (forked).
-cd ~/.config/filetlignux/dwm/
-make clean
-make
-cd -
-
-# Build st (forked).
-cd ~/.config/filetlignux/st/
-make clean
-make
-cd -
+# Build everything that needs to be compiled.
+for build in dwm st xrootname; do
+	cd ~/.config/filetlignux/$build/; make; cd -
+done
 
