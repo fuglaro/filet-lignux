@@ -1,11 +1,29 @@
 #!/bin/bash -e
 
 # Install base code.
+printf "\n\nInstalling codebase...\n\n"
 mkdir -p ~/.config
-rsync -a --delete filetlignux/ ~/.config/filetlignux
+rsync -av --delete filetlignux/ ~/.config/filetlignux
 
 # Build everything that needs to be compiled.
 for build in dwm st xrootname; do
+	printf "\n\nBuilding ${build}...\n\n"
 	cd ~/.config/filetlignux/$build/; make; cd -
 done
 
+# Installing home dir config files.
+printf "\n\nLinking HOME dir config files...\n\n"
+for file in $(find ~/.config/filetlignux/installs/ -type f); do
+	printf "$(basename $file)\n"
+	if [[ -L ~/$(basename $file) && `readlink ~/$(basename $file)` == `ls -1a ~/.config/filetlignux/installs/$(basename $file)` ]]; then
+		printf "...ok\n"
+	elif [ -f ~/$(basename $file) ]; then
+		echo "...moving aside (~/$(basename $file).old)"
+		mv ~/$(basename $file) ~/$(basename $file).old
+		echo "...installing link (~/$(basename $file))"
+		ln -s $file ~/$(basename $file)
+	else
+		echo "...installing link (~/$(basename $file))"
+		ln -s $file ~/$(basename $file)
+	fi
+done
