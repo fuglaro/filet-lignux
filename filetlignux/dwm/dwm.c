@@ -540,7 +540,6 @@ configurerequest(XEvent *e)
 		if (ev->value_mask & CWBorderWidth)
 			c->bw = ev->border_width;
 		if (c->isfloating) {
-			m = c->mon;
 			if (ev->value_mask & CWX)
 				c->x = c->oldx = ev->x;
 			if (ev->value_mask & CWY)
@@ -1062,7 +1061,9 @@ motionnotify(XEvent *e)
 void
 movemouse(const Arg *arg)
 {
-	int x, y, ocx, ocy, nx, ny;
+	int x, y, ocx, ocy, nx, ny, i;
+	char keydown = 'x';
+	char keystatemap[32];
 	Client *c;
 	Monitor *m;
 	XEvent ev;
@@ -1083,15 +1084,23 @@ movemouse(const Arg *arg)
 	XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
 	if (!getrootptr(&x, &y))
 		return;
+
 	grabguard = 1;
 	do {
 		XMaskEvent(dpy,
-			MOUSEMASK|ExposureMask|SubstructureRedirectMask|KeyRelease, &ev);
+			MOUSEMASK|ExposureMask|SubstructureRedirectMask|KeyPressMask|KeyReleaseMask,
+			&ev);
 		switch(ev.type) {
 		case ConfigureRequest:
 		case Expose:
 		case MapRequest:
 			handler[ev.type](&ev);
+			break;
+		case KeyRelease:
+			XQueryKeymap(dpy, keystatemap);
+			keydown = keystatemap[0];
+			for (i = 1; i < 32; i++)
+				keydown |= keystatemap[i];
 			break;
 		case MotionNotify:
 			if ((ev.xmotion.time - lasttime) <= (1000 / 60))
@@ -1115,7 +1124,7 @@ movemouse(const Arg *arg)
 				resize(c, nx, ny, c->w, c->h, 1);
 			break;
 		}
-	} while (ev.type != ButtonRelease && ev.type != KeyPress);
+	} while (ev.type != ButtonRelease && keydown);
 	XUngrabPointer(dpy, CurrentTime);
 	XUngrabKeyboard(dpy, CurrentTime);
 	grabguard = 0;
@@ -1230,7 +1239,9 @@ resizeclient(Client *c, int x, int y, int w, int h)
 void
 resizemouse(const Arg *arg)
 {
-	int ocx, ocy, nw, nh;
+	int ocx, ocy, nw, nh, i;
+	char keydown = 'x';
+	char keystatemap[32];
 	Client *c;
 	Monitor *m;
 	XEvent ev;
@@ -1253,12 +1264,19 @@ resizemouse(const Arg *arg)
 	XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w + c->bw - 1, c->h + c->bw - 1);
 	do {
 		XMaskEvent(dpy,
-			MOUSEMASK|ExposureMask|SubstructureRedirectMask|KeyRelease, &ev);
+			MOUSEMASK|ExposureMask|SubstructureRedirectMask|KeyPressMask|KeyReleaseMask,
+			&ev);
 		switch(ev.type) {
 		case ConfigureRequest:
 		case Expose:
 		case MapRequest:
 			handler[ev.type](&ev);
+			break;
+		case KeyRelease:
+			XQueryKeymap(dpy, keystatemap);
+			keydown = keystatemap[0];
+			for (i = 1; i < 32; i++)
+				keydown |= keystatemap[i];
 			break;
 		case MotionNotify:
 			if ((ev.xmotion.time - lasttime) <= (1000 / 60))
@@ -1267,9 +1285,10 @@ resizemouse(const Arg *arg)
 
 			nw = MAX(ev.xmotion.x - ocx - 2 * c->bw + 1, 1);
 			nh = MAX(ev.xmotion.y - ocy - 2 * c->bw + 1, 1);
-			if (c->mon->wx + nw >= selmon->wx && c->mon->wx + nw <= selmon->wx + selmon->ww
-			&& c->mon->wy + nh >= selmon->wy && c->mon->wy + nh <= selmon->wy + selmon->wh)
-			{
+			if (c->mon->wx + nw >= selmon->wx
+			&& c->mon->wx + nw <= selmon->wx + selmon->ww
+			&& c->mon->wy + nh >= selmon->wy
+			&& c->mon->wy + nh <= selmon->wy + selmon->wh) {
 				if (!c->isfloating
 				&& (abs(nw - c->w) > snap || abs(nh - c->h) > snap))
 					togglefloating(NULL);
@@ -1278,7 +1297,7 @@ resizemouse(const Arg *arg)
 				resize(c, c->x, c->y, nw, nh, 1);
 			break;
 		}
-	} while (ev.type != ButtonRelease && ev.type != KeyPress);
+	} while (ev.type != ButtonRelease && keydown);
 	XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w + c->bw - 1, c->h + c->bw - 1);
 	XUngrabPointer(dpy, CurrentTime);
 	XUngrabKeyboard(dpy, CurrentTime);
