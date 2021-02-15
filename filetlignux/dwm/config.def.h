@@ -56,7 +56,10 @@ static const char *lockcmd[] = { "slock", NULL };
 static const char *upvol[]   = { "volumeup", NULL };
 static const char *downvol[] = { "volumedown", NULL };
 static const char *mutevol[] = { "volumemute", NULL };
-static const char *helpcmd[]  = { "st",
+static const char *ssleep[]  = { "sussleep", NULL };
+static const char *dimup[]   = { "dimup", NULL };
+static const char *dimdown[] = { "dimdown", NULL };
+static const char *helpcmd[] = { "st",
 "-g80x30", "-t", "FiletLignux Controls", "-e",
 "bash", "-c", "printf 'FiletLignux Controls\n\
                Alt+`: launcher\n\
@@ -134,6 +137,9 @@ static Key keys[] = {
 	{             0, XF86XK_AudioLowerVolume, spawn, {.v = downvol } },
 	{                    0, XF86XK_AudioMute, spawn, {.v = mutevol } },
 	{             0, XF86XK_AudioRaiseVolume, spawn, {.v = upvol } },
+	{                        0, XF86XK_Sleep, spawn, {.v = ssleep } },
+	{              0, XF86XK_MonBrightnessUp, spawn, {.v = dimup } },
+	{            0, XF86XK_MonBrightnessDown, spawn, {.v = dimdown } },
 };
 
 /* button definitions

@@ -1,0 +1,5 @@
+#!/bin/bash
+
+systemctl suspend -i
+slock
+
