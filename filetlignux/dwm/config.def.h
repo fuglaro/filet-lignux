@@ -17,6 +17,8 @@
  *     * Alt+Tab combos raise windows temporarily, and then zoom on release.
 */
 
+#include <X11/XF86keysym.h>
+
 /* appearance */
 static const unsigned int borderpx  = 2;        /* border pixel of windows */
 static const unsigned int snap      = 8;       /* snap pixel */
@@ -49,8 +51,11 @@ static const char lsymbol[] = ">";
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[] = { "dmenu_run", "-p", ">", "-m", dmenumon, "-i", "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
-static const char *termcmd[]  = { "st", NULL };
-static const char *lockcmd[]  = { "slock", NULL };
+static const char *termcmd[] = { "st", NULL };
+static const char *lockcmd[] = { "slock", NULL };
+static const char *upvol[]   = { "volumeup", NULL };
+static const char *downvol[] = { "volumedown", NULL };
+static const char *mutevol[] = { "volumemute", NULL };
 static const char *helpcmd[]  = { "st",
 "-g80x30", "-t", "FiletLignux Controls", "-e",
 "bash", "-c", "printf 'FiletLignux Controls\n\
@@ -72,9 +77,9 @@ static const char *helpcmd[]  = { "st",
          Ctrl+Alt+Up: previous window (raise and focus)\n\
       Ctrl+Alt+Enter: raise and zoom window\n\
 \n\
-           Alt+[1-9]: switch workspace\n\
+           Alt+[1-9]: switch workspace (or next window)\n\
       Ctrl+Alt+[1-9]: combine workspace\n\
-     Shift+Alt+[1-9]: move window to workspace\n\
+     Shift+Alt+[1-9]: move window to workspace (or previous window)\n\
 Shift+Ctrl+Alt+[1-9]: add window to workspace\n\
          Shift+Alt+0: add window to all workspaces\n\
        Ctrl+Alt+Left: switch to previous workspace\n\
@@ -86,60 +91,64 @@ Shift+Ctrl+Alt+Right: move window and switch to next workspace\n\
 /* key definitions */
 #define MODKEY Mod1Mask
 #define TAGKEYS(KEY,TAG) \
-	{ MODKEY,                       KEY,      view,           {.ui = 1 << TAG} }, \
-	{ MODKEY|ControlMask,           KEY,      toggleview,     {.ui = 1 << TAG} }, \
-	{ MODKEY|ShiftMask,             KEY,      tag,            {.ui = 1 << TAG} }, \
-	{ MODKEY|ControlMask|ShiftMask, KEY,      toggletag,      {.ui = 1 << TAG} },
+	{                            MODKEY, KEY, view, {.ui = 1 << TAG} }, \
+	{                MODKEY|ControlMask, KEY, toggleview, {.ui = 1 << TAG} }, \
+	{                  MODKEY|ShiftMask, KEY, tag, {.ui = 1 << TAG} }, \
+	{      MODKEY|ControlMask|ShiftMask, KEY, toggletag, {.ui = 1 << TAG} },
 
 static const KeySym grabstackrelease = XK_Alt_L;
 static Key keys[] = {
-	/* modifier                     key        function        argument */
-	{ MODKEY,                       XK_grave,  spawn,          {.v = dmenucmd } },
-	{ MODKEY|ShiftMask,             XK_grave,  spawn,          {.v = termcmd } },
-	{ ShiftMask,                    XK_grave,  movemouse,      {0} },
-	{ ControlMask,                  XK_grave,  resizemouse,    {0} },
-	{ ControlMask|ShiftMask,        XK_grave,  togglefloating, {0} },
-	{ MODKEY,                       XK_Return, togglefullscreen, {0} },
-	{ MODKEY,                       XK_F4,     killclient,     {0} },
-	{ MODKEY|ShiftMask,             XK_F4,     spawn,          {.v = lockcmd} },
-	{ MODKEY|ControlMask|ShiftMask, XK_F4,     quit,           {0} },
+	/*                        modifier / key, function / argument */
+	{                       MODKEY, XK_grave, spawn, {.v = dmenucmd } },
+	{             MODKEY|ShiftMask, XK_grave, spawn, {.v = termcmd } },
+	{                    ShiftMask, XK_grave, movemouse, {0} },
+	{                  ControlMask, XK_grave, resizemouse, {0} },
+	{        ControlMask|ShiftMask, XK_grave, togglefloating, {0} },
+	{                      MODKEY, XK_Return, togglefullscreen, {0} },
+	{                          MODKEY, XK_F4, killclient, {0} },
+	{                MODKEY|ShiftMask, XK_F4, spawn, {.v = lockcmd} },
+	{    MODKEY|ControlMask|ShiftMask, XK_F4, quit, {0} },
 
-	{ MODKEY,                       XK_Tab,    grabstack,      {.i = +1 } },
-	{ MODKEY|ShiftMask,             XK_Tab,    grabstack,      {.i = -1 } },
+	{                         MODKEY, XK_Tab, grabstack, {.i = +1 } },
+	{               MODKEY|ShiftMask, XK_Tab, grabstack, {.i = -1 } },
 
-	{ MODKEY|ControlMask,           XK_Down,   focusstack,     {.i = +1 } },
-	{ MODKEY|ControlMask,           XK_Up,     focusstack,     {.i = -1 } },
-	{ MODKEY|ControlMask,           XK_Return, zoom,           {0} },
+	{            MODKEY|ControlMask, XK_Down, focusstack, {.i = +1 } },
+	{              MODKEY|ControlMask, XK_Up, focusstack, {.i = -1 } },
+	{          MODKEY|ControlMask, XK_Return, zoom, {0} },
 
-	TAGKEYS(                        XK_1,                      0)
-	TAGKEYS(                        XK_2,                      1)
-	TAGKEYS(                        XK_3,                      2)
-	TAGKEYS(                        XK_4,                      3)
-	TAGKEYS(                        XK_5,                      4)
-	TAGKEYS(                        XK_6,                      5)
-	TAGKEYS(                        XK_7,                      6)
-	TAGKEYS(                        XK_8,                      7)
-	TAGKEYS(                        XK_9,                      8)
-	{ MODKEY|ShiftMask,             XK_0,      tag,            {.ui = ~0 } },
-	{ MODKEY|ControlMask,           XK_Left,   focusview,      {.i = -1 } },
-	{ MODKEY|ControlMask,           XK_Right,  focusview,      {.i = +1 } },
-	{ MODKEY|ControlMask|ShiftMask, XK_Left,   moveview,       {.i = -1 } },
-	{ MODKEY|ControlMask|ShiftMask, XK_Right,  moveview,       {.i = +1 } },
+	TAGKEYS( XK_1, 0)
+	TAGKEYS( XK_2, 1)
+	TAGKEYS( XK_3, 2)
+	TAGKEYS( XK_4, 3)
+	TAGKEYS( XK_5, 4)
+	TAGKEYS( XK_6, 5)
+	TAGKEYS( XK_7, 6)
+	TAGKEYS( XK_8, 7)
+	TAGKEYS( XK_9, 8)
+	{                 MODKEY|ShiftMask, XK_0, tag, {.ui = ~0 } },
+	{            MODKEY|ControlMask, XK_Left, focusview, {.i = -1 } },
+	{           MODKEY|ControlMask, XK_Right, focusview, {.i = +1 } },
+	{  MODKEY|ControlMask|ShiftMask, XK_Left, moveview, {.i = -1 } },
+	{ MODKEY|ControlMask|ShiftMask, XK_Right, moveview, {.i = +1 } },
+
+	{             0, XF86XK_AudioLowerVolume, spawn, {.v = downvol } },
+	{                    0, XF86XK_AudioMute, spawn, {.v = mutevol } },
+	{             0, XF86XK_AudioRaiseVolume, spawn, {.v = upvol } },
 };
 
 /* button definitions
- * click can be ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle, ClkClientWin,
- * or ClkRootWin
+ * click can be ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle,
+ * ClkClientWin, or ClkRootWin
  */
 static Button buttons[] = {
-	/* click         event mask    button      function        argument */
-	{ ClkLtSymbol,   0,            Button1,    spawn,          {.v = dmenucmd } },
-	{ ClkLtSymbol,   0,            Button3,    spawn,          {.v = termcmd } },
-	{ ClkStatusText, 0,            Button1,    spawn,          {.v = helpcmd } },
+	/* click,         mask / button, function / argument */
+	{ ClkLtSymbol,       0, Button1, spawn, {.v = dmenucmd } },
+	{ ClkLtSymbol,       0, Button3, spawn, {.v = termcmd } },
+	{ ClkStatusText,     0, Button1, spawn, {.v = helpcmd } },
 
-	{ ClkTagBar,     0,            Button1,    view,           {0} },
-	{ ClkTagBar,     0,            Button3,    toggleview,     {0} },
-	{ ClkTagBar,     MODKEY,       Button1,    tag,            {0} },
-	{ ClkTagBar,     MODKEY,       Button3,    toggletag,      {0} },
+	{ ClkTagBar,         0, Button1, view, {0} },
+	{ ClkTagBar,         0, Button3, toggleview, {0} },
+	{ ClkTagBar, ShiftMask, Button1, tag, {0} },
+	{ ClkTagBar, ShiftMask, Button3, toggletag, {0} },
 };
 

@@ -866,7 +866,9 @@ grabbuttons(Client *c)
 	updatenumlockmask();
 	{
 		unsigned int i, j;
-		unsigned int modifiers[] = { 0, LockMask, numlockmask, numlockmask|LockMask };
+		unsigned int modifiers[] = {
+			0, LockMask, numlockmask, numlockmask|LockMask };
+
 		XUngrabButton(dpy, AnyButton, AnyModifier, c->win);
 		if (c != selmon->clients)
 			XGrabButton(dpy, AnyButton, AnyModifier, c->win, False,
@@ -892,7 +894,8 @@ grabkeys(void)
 	updatenumlockmask();
 	{
 		unsigned int i, j;
-		unsigned int modifiers[] = { 0, LockMask, numlockmask, numlockmask|LockMask };
+		unsigned int modifiers[] = {
+			0, LockMask, numlockmask, numlockmask|LockMask };
 		KeyCode code;
 
 		XUngrabKey(dpy, AnyKey, AnyModifier, root);
@@ -1592,6 +1595,10 @@ void
 tag(const Arg *arg)
 {
 	if (selmon->sel && arg->ui & TAGMASK) {
+		if (selmon->sel->tags == (arg->ui & TAGMASK)) {
+			focusstack(&(Arg){.i = -1});
+			return;
+		}
 		selmon->sel->tags = arg->ui & TAGMASK;
 		focus(NULL);
 		arrange(selmon);
@@ -1974,8 +1981,10 @@ moveview(const Arg *arg)
 void
 view(const Arg *arg)
 {
-	if ((arg->ui & TAGMASK) == selmon->tagset[selmon->seltags])
+	if ((arg->ui & TAGMASK) == selmon->tagset[selmon->seltags]) {
+		focusstack(&(Arg){.i = +1});
 		return;
+	}
 	selmon->seltags ^= 1; /* toggle sel tagset */
 	if (arg->ui & TAGMASK)
 		selmon->tagset[selmon->seltags] = arg->ui & TAGMASK;

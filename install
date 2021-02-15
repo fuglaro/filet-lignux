@@ -1,6 +1,7 @@
 #!/bin/bash -e
 
 # Check dependencies
+printf "\n\nChecking dependencies...\n\n"
 command -v rsync || (echo "need rsync"; exit 1)
 command -v conky || (echo "need conky"; exit 1)
 command -v feh || (echo "need feh"; exit 1)
