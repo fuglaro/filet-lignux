@@ -52,6 +52,9 @@
 #define ISVISIBLE(C)            ((C->tags & C->mon->tagset[C->mon->seltags]))
 #define LENGTH(X)               (sizeof X / sizeof X[0])
 #define MOUSEMASK               (BUTTONMASK|PointerMotionMask)
+#define MOVEZONE(C, X, Y)       (abs(C->x - X) <= C->bw || abs(C->y - Y) <= C->bw)
+#define RESIZEZONE(C, X, Y)     (abs(C->x + WIDTH(C) - X) <= C->bw ||\
+                                 abs(C->y + HEIGHT(C) - Y) <= C->bw)
 #define WIDTH(X)                ((X)->w + 2 * (X)->bw)
 #define HEIGHT(X)               ((X)->h + 2 * (X)->bw)
 #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
@@ -149,9 +152,8 @@ static void expose(XEvent *e);
 static void focus(Client *c);
 static void focusin(XEvent *e);
 static void focusstack(const Arg *arg);
-static void grabstack(const Arg *arg);
 static void focusview(const Arg *arg);
-static void moveview(const Arg *arg);
+static void grabstack(const Arg *arg);
 static Atom getatomprop(Client *c, Atom prop);
 static int getrootptr(int *x, int *y);
 static long getstate(Window w);
@@ -161,11 +163,13 @@ static void grabkeys(void);
 static void keypress(XEvent *e);
 static void keyrelease(XEvent *e);
 static void killclient(const Arg *arg);
+static void leavenotify(XEvent *e);
 static void manage(Window w, XWindowAttributes *wa);
 static void mappingnotify(XEvent *e);
 static void maprequest(XEvent *e);
 static void motionnotify(XEvent *e);
 static void movemouse(const Arg *arg);
+static void moveview(const Arg *arg);
 static Client *nexttiled(Client *c);
 static void pop(Client *);
 static void propertynotify(XEvent *e);
@@ -182,7 +186,6 @@ static void sendmon(Client *c, Monitor *m);
 static void setclientstate(Client *c, long state);
 static void setfocus(Client *c);
 static void setfullscreen(Client *c, int fullscreen);
-static void togglefullscreen(const Arg *arg);
 static void setup(void);
 static void seturgent(Client *c, int urg);
 static void showhide(Client *c);
@@ -190,6 +193,7 @@ static void sigchld(int unused);
 static void spawn(const Arg *arg);
 static void tag(const Arg *arg);
 static void togglefloating(const Arg *arg);
+static void togglefullscreen(const Arg *arg);
 static void toggletag(const Arg *arg);
 static void toggleview(const Arg *arg);
 static void unfocus(Client *c, int setfocus);
@@ -235,6 +239,7 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 	[FocusIn] = focusin,
 	[KeyPress] = keypress,
 	[KeyRelease] = keyrelease,
+	[LeaveNotify] = leavenotify,
 	[MappingNotify] = mappingnotify,
 	[MapRequest] = maprequest,
 	[MotionNotify] = motionnotify,
@@ -679,6 +684,70 @@ drawbars(void)
 }
 
 void
+catchmouseresize(Client *c) {
+	int x, y, di;
+	unsigned int mask;
+	Window dummy;
+	XEvent ev;
+	Time lasttime = 0;
+
+	if (!(c = selmon->sel) || c->isfullscreen || !c->bw || !c->isfloating)
+		return;
+	if (!XQueryPointer(dpy, root, &dummy, &dummy, &x, &y, &di, &di, &mask))
+		return;
+	if (mask & (Button1Mask|Button2Mask|Button3Mask|Button4Mask|Button5Mask))
+		return;
+	if (!MOVEZONE(c, x, y) && !RESIZEZONE(c, x, y))
+		return;
+	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
+		None, cursor[CurResize]->cursor, CurrentTime) != GrabSuccess)
+		return;
+
+	do {
+		XMaskEvent(dpy,
+			MOUSEMASK|ExposureMask|SubstructureRedirectMask|KeyPressMask|KeyReleaseMask,
+			&ev);
+		switch(ev.type) {
+		case ConfigureRequest:
+		case Expose:
+		case MapRequest:
+			handler[ev.type](&ev);
+			break;
+		case MotionNotify:
+			if ((ev.xmotion.time - lasttime) <= (1000 / 60))
+				continue;
+			lasttime = ev.xmotion.time;
+			x = ev.xmotion.x;
+			y = ev.xmotion.y;
+			break;
+		case ButtonPress:
+			if (ev.xbutton.button == Button1) {
+				if (MOVEZONE(c, x, y))
+					movemouse(&(Arg){0});
+				else if (RESIZEZONE(c, x, y))
+					resizemouse(&(Arg){0});
+			}
+		}
+	} while (ev.type != ButtonPress && ev.type != ButtonRelease
+		&& (MOVEZONE(c, x, y) || RESIZEZONE(c, x, y)));
+	XUngrabPointer(dpy, CurrentTime);
+}
+
+void leavenotify(XEvent *e)
+{
+	Client *c;
+	XCrossingEvent *ev = &e->xcrossing;
+
+	if ((ev->mode != NotifyNormal || ev->detail == NotifyInferior)
+	&& ev->window != root)
+		return;
+	c = wintoclient(ev->window);
+	if (!c)
+		return;
+	catchmouseresize(c);
+}
+
+void
 enternotify(XEvent *e)
 {
 	Client *c;
@@ -692,9 +761,11 @@ enternotify(XEvent *e)
 	if (m != selmon) {
 		unfocus(selmon->sel, 1);
 		selmon = m;
-	} else if (!c || c == selmon->sel)
+	} else if (!c)
 		return;
-	focus(c);
+	if (c != selmon->sel)
+		focus(c);
+	catchmouseresize(c);
 }
 
 void
@@ -995,7 +1066,7 @@ manage(Window w, XWindowAttributes *wa)
 	updatewindowtype(c);
 	updatesizehints(c);
 	updatewmhints(c);
-	XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|PropertyChangeMask|StructureNotifyMask);
+	XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|LeaveWindowMask|PropertyChangeMask|StructureNotifyMask);
 	if (!c->isfloating)
 		c->isfloating = c->oldstate = trans != None || c->isfixed;
 	if (c->isfloating) {
