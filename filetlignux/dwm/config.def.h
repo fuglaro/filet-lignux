@@ -71,6 +71,7 @@ static const char *helpcmd[] = { "st",
              LButton: raise window (zoom if not tiled)\n\
               Alt+F4: close window\n\
         Shift+Alt+F4: lock\n\
+       Shift+Ctrl+F4: sleep\n\
    Shift+Ctrl+Alt+F4: quit\n\
 \n\
              Alt+Tab: next window (raise and focus, then zoom on release)\n\
@@ -110,6 +111,7 @@ static Key keys[] = {
 	{                      MODKEY, XK_Return, togglefullscreen, {0} },
 	{                          MODKEY, XK_F4, killclient, {0} },
 	{                MODKEY|ShiftMask, XK_F4, spawn, {.v = lockcmd} },
+	{           ShiftMask|ControlMask, XK_F4, spawn, {.v = ssleep } },
 	{    MODKEY|ControlMask|ShiftMask, XK_F4, quit, {0} },
 
 	{                         MODKEY, XK_Tab, grabstack, {.i = +1 } },
