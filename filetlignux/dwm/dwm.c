@@ -350,7 +350,7 @@ arrange(Monitor *m)
 		if (cw)
 			c = wintoclient(cw);
 		if (c)
-			grabbuttons(wintoclient(cw));
+			grabbuttons(c);
 		else if (selmon->sel)
 			grabbuttons(selmon->sel);
 	}
@@ -838,6 +838,7 @@ focusstack(const Arg *arg)
 	if (c) {
 		focus(c);
 		restack(selmon);
+		grabbuttons(c);
 	}
 }
 
@@ -925,9 +926,13 @@ grabbuttons(Client *c)
 {
 	updatenumlockmask();
 	{
-		unsigned int i, j;
+		int di;
+		unsigned int i, j, dui;
 		unsigned int modifiers[] = {
 			0, LockMask, numlockmask, numlockmask|LockMask };
+		Window dummy;
+		Window cw;
+		Client *fc = NULL;
 
 		XUngrabButton(dpy, AnyButton, AnyModifier, c->win);
 		if (c != selmon->clients)
@@ -940,7 +945,14 @@ grabbuttons(Client *c)
 						buttons[i].mask | modifiers[j],
 						c->win, False, BUTTONMASK,
 						GrabModeAsync, GrabModeSync, None, None);
-		if (c != c->mon->raised)
+
+
+		XQueryPointer(dpy, root, &dummy, &cw, &di, &di, &di, &di, &dui);
+		if (cw && wintoclient(cw))
+			c = wintoclient(cw);
+		for (fc = c->mon->stack; !fc->isfloating && fc; fc = fc->snext);
+		if ((c->mon->raised && c != c->mon->raised)
+		|| (fc && !c->mon->raised && c != fc))
 			for (j = 0; j < LENGTH(modifiers); j++)
 				XGrabButton(dpy, Button1, modifiers[j],
 						c->win, False, BUTTONMASK,
