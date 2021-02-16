@@ -152,6 +152,9 @@ static Button buttons[] = {
 	{ ClkLtSymbol,       0, Button3, spawn, {.v = termcmd } },
 	{ ClkStatusText,     0, Button1, spawn, {.v = helpcmd } },
 
+	{ ClkWinTitle,       0, Button1, focusstack, {.i = +1 } },
+	{ ClkWinTitle,       0, Button3, focusstack, {.i = -1 } },
+
 	{ ClkTagBar,         0, Button1, view, {0} },
 	{ ClkTagBar,         0, Button3, toggleview, {0} },
 	{ ClkTagBar, ShiftMask, Button1, tag, {0} },
