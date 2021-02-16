@@ -710,6 +710,7 @@ catchmouseresize(Client *c) {
 		switch(ev.type) {
 		case ConfigureRequest:
 		case Expose:
+		case KeyPress:
 		case MapRequest:
 			handler[ev.type](&ev);
 			break;
@@ -728,7 +729,7 @@ catchmouseresize(Client *c) {
 					resizemouse(&(Arg){0});
 			}
 		}
-	} while (ev.type != ButtonPress && ev.type != ButtonRelease
+	} while (ev.type != ButtonPress && ev.type != ButtonRelease && running
 		&& (MOVEZONE(c, x, y) || RESIZEZONE(c, x, y)));
 	XUngrabPointer(dpy, CurrentTime);
 }
