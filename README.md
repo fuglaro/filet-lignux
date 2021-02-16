@@ -10,6 +10,7 @@ https://github.com/torvalds/linux
 https://dwm.suckless.org
 https://st.suckless.org
 https://st.suckless.org/patches/nordtheme
+https://st.suckless.org/patches/delkey
 https://tools.suckless.org/slock
 https://github.com/brndnmtthws/conky
 https://www.vim.org
