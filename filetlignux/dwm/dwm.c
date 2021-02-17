@@ -951,11 +951,10 @@ grabbuttons(Client *c)
 						c->win, False, BUTTONMASK,
 						GrabModeAsync, GrabModeSync, None, None);
 
-
 		XQueryPointer(dpy, root, &dummy, &cw, &di, &di, &di, &di, &dui);
 		if (cw && wintoclient(cw))
 			c = wintoclient(cw);
-		for (fc = c->mon->stack; !fc->isfloating && fc; fc = fc->snext);
+		for (fc = c->mon->stack; fc && !fc->isfloating; fc = fc->snext);
 		if ((c->mon->raised && c != c->mon->raised)
 		|| (fc && !c->mon->raised && c != fc))
 			for (j = 0; j < LENGTH(modifiers); j++)
