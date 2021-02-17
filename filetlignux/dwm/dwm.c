@@ -689,6 +689,7 @@ void
 catchmouseresize(Client *c) {
 	int x, y, di;
 	unsigned int mask;
+	unsigned int abort = 0;
 	Window dummy;
 	XEvent ev;
 	Time lasttime = 0;
@@ -710,9 +711,11 @@ catchmouseresize(Client *c) {
 			MOUSEMASK|ExposureMask|SubstructureRedirectMask|KeyPressMask|KeyReleaseMask,
 			&ev);
 		switch(ev.type) {
+		case KeyPress:
+			XUngrabPointer(dpy, CurrentTime);
+			abort = 1;
 		case ConfigureRequest:
 		case Expose:
-		case KeyPress:
 		case MapRequest:
 			handler[ev.type](&ev);
 			break;
@@ -731,7 +734,7 @@ catchmouseresize(Client *c) {
 					resizemouse(&(Arg){0});
 			}
 		}
-	} while (ev.type != ButtonPress && ev.type != ButtonRelease && running
+	} while (ev.type != ButtonPress && ev.type != ButtonRelease && !abort
 		&& (MOVEZONE(c, x, y) || RESIZEZONE(c, x, y)));
 	XUngrabPointer(dpy, CurrentTime);
 }
