@@ -20,9 +20,13 @@
 #include <X11/XF86keysym.h>
 
 /* appearance */
-static const unsigned int borderpx  = 2;        /* border pixel of windows */
-static const unsigned int snap      = 8;       /* snap pixel */
-static const int topbar             = 1;        /* 0 means bottom bar */
+static const unsigned int borderpx  = 2; /* border pixel of windows */
+static const unsigned int snap      = 8; /* snap pixel */
+static const int topbar             = 1; /* 0 means bottom bar */
+static const Time zenmode           = 3; /* if set, delays showing
+                                            rapid sequences of client driven
+                                            window title changes until the
+                                            next natural refresh. */
 static const char *fonts[]          = { "monospace:bold:size=4" };
 static const char dmenufont[]       = "monospace:size=8";
 static const char col_gray1[]       = "#111111";

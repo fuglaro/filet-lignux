@@ -100,6 +100,7 @@ struct Client {
 	Client *snext;
 	Monitor *mon;
 	Window win;
+	Time zenping;
 };
 
 typedef struct {
@@ -1054,6 +1055,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->w = c->oldw = wa->width;
 	c->h = c->oldh = wa->height;
 	c->oldbw = wa->border_width;
+	c->zenping = 0;
 
 	updatetitle(c);
 	if (XGetTransientForHint(dpy, w, &trans) && (t = wintoclient(trans))) {
@@ -1269,7 +1271,10 @@ propertynotify(XEvent *e)
 		if (ev->atom == XA_WM_NAME || ev->atom == netatom[NetWMName]) {
 			updatetitle(c);
 			if (c == c->mon->sel)
-				drawbar(c->mon);
+				if (!zenmode || (ev->time - c->zenping) > (zenmode * 1000))
+					drawbar(c->mon);
+			c->zenping = ev->time;
+
 		}
 		if (ev->atom == netatom[NetWMWindowType])
 			updatewindowtype(c);
