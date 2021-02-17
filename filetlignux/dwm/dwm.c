@@ -101,6 +101,7 @@ struct Client {
 	Monitor *mon;
 	Window win;
 	Time zenping;
+	char zenname[256];
 };
 
 typedef struct {
@@ -146,7 +147,7 @@ static Monitor *createmon(void);
 static void destroynotify(XEvent *e);
 static void detach(Client *c);
 static void detachstack(Client *c);
-static void drawbar(Monitor *m);
+static void drawbar(Monitor *m, int zen);
 static void drawbars(void);
 static void enternotify(XEvent *e);
 static void expose(XEvent *e);
@@ -623,7 +624,7 @@ detachstack(Client *c)
 }
 
 void
-drawbar(Monitor *m)
+drawbar(Monitor *m, int zen)
 {
 	int x, w, tw = 0;
 	int boxs = drw->fonts->h / 9;
@@ -666,7 +667,7 @@ drawbar(Monitor *m)
 	if ((w = vw - x - tw) > bh) {
 		if (m->sel) {
 			drw_setscheme(drw, scheme[SchemeNorm]);
-			drw_text(drw, x, 0, w, bh, lrpad / 2, m->sel->name, 0);
+			drw_text(drw, x, 0, w, bh, lrpad / 2, zen ? m->sel->zenname : m->sel->name, 0);
 			if (m->sel->isfloating)
 				drw_rect(drw, x + boxs, boxs, boxw, boxw, m->sel->isfixed, 0);
 		} else {
@@ -683,7 +684,7 @@ drawbars(void)
 	Monitor *m;
 
 	for (m = mons; m; m = m->next)
-		drawbar(m);
+		drawbar(m, 0);
 }
 
 void
@@ -782,7 +783,7 @@ expose(XEvent *e)
 	XExposeEvent *ev = &e->xexpose;
 
 	if (ev->count == 0 && (m = wintomon(ev->window)))
-		drawbar(m);
+		drawbar(m, 0);
 }
 
 void
@@ -1058,6 +1059,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->zenping = 0;
 
 	updatetitle(c);
+	strcpy(c->name, c->zenname);
 	if (XGetTransientForHint(dpy, w, &trans) && (t = wintoclient(trans))) {
 		c->mon = t->mon;
 		c->tags = t->tags;
@@ -1271,8 +1273,10 @@ propertynotify(XEvent *e)
 		if (ev->atom == XA_WM_NAME || ev->atom == netatom[NetWMName]) {
 			updatetitle(c);
 			if (c == c->mon->sel)
-				if (!zenmode || (ev->time - c->zenping) > (zenmode * 1000))
-					drawbar(c->mon);
+				if (!zenmode || (ev->time - c->zenping) > (zenmode * 1000)) {
+					strcpy(c->name, c->zenname);
+					drawbar(c->mon, 0);
+				}
 			c->zenping = ev->time;
 
 		}
@@ -1411,7 +1415,7 @@ restack(Monitor *m)
 	XEvent ev;
 	XWindowChanges wc;
 
-	drawbar(m);
+	drawbar(m, 0);
 	if (!m->sel)
 		return;
 	XLowerWindow(dpy, m->barwin);
@@ -2011,7 +2015,7 @@ updatestatus(void)
 {
 	if (!gettextprop(root, XA_WM_NAME, stext, sizeof(stext)))
 		strcpy(stext, "  FiletLignux  ");
-	drawbar(selmon);
+	drawbar(selmon, 1);
 }
 
 void
