@@ -407,6 +407,8 @@ buttonpress(XEvent *e)
 		restack(selmon);
 		grabbuttons(c);
 		XAllowEvents(dpy, ReplayPointer, CurrentTime);
+		if (!CLEANMASK(ev->state) && ev->button == Button1)
+			XSendEvent(dpy, c->win, False, None, e);
 		click = ClkClientWin;
 	}
 	for (i = 0; i < LENGTH(buttons); i++)
