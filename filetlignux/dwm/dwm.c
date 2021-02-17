@@ -1059,7 +1059,7 @@ manage(Window w, XWindowAttributes *wa)
 	c->zenping = 0;
 
 	updatetitle(c);
-	strcpy(c->name, c->zenname);
+	strcpy(c->zenname, c->name);
 	if (XGetTransientForHint(dpy, w, &trans) && (t = wintoclient(trans))) {
 		c->mon = t->mon;
 		c->tags = t->tags;
@@ -1274,7 +1274,7 @@ propertynotify(XEvent *e)
 			updatetitle(c);
 			if (c == c->mon->sel)
 				if (!zenmode || (ev->time - c->zenping) > (zenmode * 1000)) {
-					strcpy(c->name, c->zenname);
+					strcpy(c->zenname, c->name);
 					drawbar(c->mon, 0);
 				}
 			c->zenping = ev->time;
