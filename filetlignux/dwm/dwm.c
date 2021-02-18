@@ -39,6 +39,7 @@
 #ifdef XINERAMA
 #include <X11/extensions/Xinerama.h>
 #endif /* XINERAMA */
+#include <X11/extensions/XInput2.h>
 #include <X11/Xft/Xft.h>
 
 #include "drw.h"
@@ -151,6 +152,7 @@ static void drawbar(Monitor *m, int zen);
 static void drawbars(void);
 static void enternotify(XEvent *e);
 static void expose(XEvent *e);
+static void exthandler(XEvent *ev);
 static void focus(Client *c);
 static void focusin(XEvent *e);
 static void focusstack(const Arg *arg);
@@ -168,13 +170,13 @@ static void killclient(const Arg *arg);
 static void manage(Window w, XWindowAttributes *wa);
 static void mappingnotify(XEvent *e);
 static void maprequest(XEvent *e);
-static void motionnotify(XEvent *e);
 static void movemouse(const Arg *arg);
 static void moveview(const Arg *arg);
 static Client *nexttiled(Client *c);
 static void pop(Client *);
 static void propertynotify(XEvent *e);
 static void quit(const Arg *arg);
+static void rawmotion(XEvent *e);
 static Monitor *recttomon(int x, int y, int w, int h);
 static void resize(Client *c, int x, int y, int w, int h, int interact);
 static void resizeclient(Client *c, int x, int y, int w, int h);
@@ -229,7 +231,6 @@ static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask = 0;
 static unsigned int stackgrabbed = 0;
 static unsigned int grabguard = 0;
-static Time lastedgecheck = 0;
 static void (*handler[LASTEvent]) (XEvent *) = {
 	[ButtonPress] = buttonpress,
 	[ClientMessage] = clientmessage,
@@ -239,13 +240,14 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 	[EnterNotify] = enternotify,
 	[Expose] = expose,
 	[FocusIn] = focusin,
+	[GenericEvent] = exthandler,
 	[KeyPress] = keypress,
 	[KeyRelease] = keyrelease,
 	[MappingNotify] = mappingnotify,
 	[MapRequest] = maprequest,
-	[MotionNotify] = motionnotify,
 	[PropertyNotify] = propertynotify,
-	[UnmapNotify] = unmapnotify
+	[UnmapNotify] = unmapnotify,
+	[XI_RawMotion] = rawmotion
 };
 static Atom wmatom[WMLast], netatom[NetLast];
 static int running = 1;
@@ -1064,7 +1066,7 @@ manage(Window w, XWindowAttributes *wa)
 	updatesizehints(c);
 	updatewmhints(c);
 	XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask
-		|PropertyChangeMask|StructureNotifyMask|PointerMotionMask);
+		|PropertyChangeMask|StructureNotifyMask);
 	if (!c->isfloating)
 		c->isfloating = c->oldstate = trans != None || c->isfixed;
 	if (c->isfloating) {
@@ -1111,27 +1113,27 @@ maprequest(XEvent *e)
 }
 
 void
-motionnotify(XEvent *e)
+rawmotion(XEvent *e)
 {
 	static Monitor *mon = NULL;
 	Monitor *m;
-	XMotionEvent *ev = &e->xmotion;
+	int rx, ry, di;
+	unsigned int dui;
+	Window cw, dummy;
 	Client *c;
 
-	if (ev->window != root) {
-		if ((ev->time - lastedgecheck) <= (1000 / 60))
-			return;
-		lastedgecheck = ev->time;
-		if ((c = wintoclient(ev->window)))
-			catchmouseresize(c);
+	if (!XQueryPointer(dpy, root, &dummy, &cw, &rx, &ry, &di, &di, &dui))
 		return;
-	}
-	if ((m = recttomon(ev->x_root, ev->y_root, 1, 1)) != mon && mon) {
+
+	if ((m = recttomon(rx, ry, 1, 1)) != mon && mon) {
 		unfocus(selmon->sel, 1);
 		selmon = m;
 		focus(NULL);
 	}
 	mon = m;
+
+	if (cw && cw != root && (c = wintoclient(cw)))
+		catchmouseresize(c);
 }
 
 void
@@ -1421,6 +1423,13 @@ restack(Monitor *m)
 }
 
 void
+exthandler(XEvent *ev)
+{
+	if (handler[ev->xcookie.evtype])
+		handler[ev->xcookie.evtype](ev); /* call handler */
+}
+
+void
 run(void)
 {
 	XEvent ev;
@@ -1558,7 +1567,9 @@ togglefullscreen(const Arg *arg)
 void
 setup(void)
 {
-	int i;
+	int i, di;
+	unsigned char xi[XIMaskLen(XI_RawMotion)] = { 0 };
+	XIEventMask evm;
 	XSetWindowAttributes wa;
 	Atom utf8string;
 
@@ -1576,6 +1587,11 @@ setup(void)
 	lrpad = drw->fonts->h;
 	bh = drw->fonts->h + 2;
 	updategeom();
+	/* check XInput2 */
+	if (!XQueryExtension(dpy, "XInputExtension", &di, &di, &di)
+	|| XIQueryVersion(dpy, &(int){2}, &(int){0}) != Success)
+		die("XInput2 extension needed.");
+
 	/* init atoms */
 	utf8string = XInternAtom(dpy, "UTF8_STRING", False);
 	wmatom[WMProtocols] = XInternAtom(dpy, "WM_PROTOCOLS", False);
@@ -1617,10 +1633,17 @@ setup(void)
 	/* select events */
 	wa.cursor = cursor[CurNormal]->cursor;
 	wa.event_mask = SubstructureRedirectMask|SubstructureNotifyMask
-		|ButtonPressMask|PointerMotionMask|EnterWindowMask
+		|ButtonPressMask|EnterWindowMask
 		|LeaveWindowMask|StructureNotifyMask|PropertyChangeMask;
 	XChangeWindowAttributes(dpy, root, CWEventMask|CWCursor, &wa);
 	XSelectInput(dpy, root, wa.event_mask);
+	/* select xinput events */
+	XISetMask(xi, XI_RawMotion);
+	evm.deviceid = XIAllMasterDevices;
+	evm.mask_len = sizeof(xi);
+	evm.mask = xi;
+	XISelectEvents(dpy, root, &evm, 1);
+
 	grabkeys();
 	focus(NULL);
 }
