@@ -165,7 +165,6 @@ static void grabkeys(void);
 static void keypress(XEvent *e);
 static void keyrelease(XEvent *e);
 static void killclient(const Arg *arg);
-static void leavenotify(XEvent *e);
 static void manage(Window w, XWindowAttributes *wa);
 static void mappingnotify(XEvent *e);
 static void maprequest(XEvent *e);
@@ -230,6 +229,7 @@ static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask = 0;
 static unsigned int stackgrabbed = 0;
 static unsigned int grabguard = 0;
+static Time lastedgecheck = 0;
 static void (*handler[LASTEvent]) (XEvent *) = {
 	[ButtonPress] = buttonpress,
 	[ClientMessage] = clientmessage,
@@ -241,7 +241,6 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 	[FocusIn] = focusin,
 	[KeyPress] = keypress,
 	[KeyRelease] = keyrelease,
-	[LeaveNotify] = leavenotify,
 	[MappingNotify] = mappingnotify,
 	[MapRequest] = maprequest,
 	[MotionNotify] = motionnotify,
@@ -336,6 +335,7 @@ arrange(Monitor *m)
 	unsigned int dui;
 	Window dummy;
 	Window cw;
+	Client *c;
 
 	if (m)
 		showhide(m->stack);
@@ -348,8 +348,8 @@ arrange(Monitor *m)
 		tile(m);
 	if (m == selmon) {
 		XQueryPointer(dpy, root, &dummy, &cw, &di, &di, &di, &di, &dui);
-		if (cw && wintoclient(cw))
-			grabbuttons(wintoclient(cw));
+		if (cw && (c = wintoclient(cw)))
+			grabbuttons(c);
 		else if (selmon->sel)
 			grabbuttons(selmon->sel);
 	}
@@ -736,20 +736,6 @@ catchmouseresize(Client *c) {
 	XUngrabPointer(dpy, CurrentTime);
 }
 
-void leavenotify(XEvent *e)
-{
-	Client *c;
-	XCrossingEvent *ev = &e->xcrossing;
-
-	if ((ev->mode != NotifyNormal || ev->detail == NotifyInferior)
-	&& ev->window != root)
-		return;
-	c = wintoclient(ev->window);
-	if (!c)
-		return;
-	catchmouseresize(c);
-}
-
 void
 enternotify(XEvent *e)
 {
@@ -768,7 +754,6 @@ enternotify(XEvent *e)
 		return;
 	if (c != selmon->sel)
 		focus(c);
-	catchmouseresize(c);
 }
 
 void
@@ -1078,7 +1063,8 @@ manage(Window w, XWindowAttributes *wa)
 	updatewindowtype(c);
 	updatesizehints(c);
 	updatewmhints(c);
-	XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask|LeaveWindowMask|PropertyChangeMask|StructureNotifyMask);
+	XSelectInput(dpy, w, EnterWindowMask|FocusChangeMask
+		|PropertyChangeMask|StructureNotifyMask|PointerMotionMask);
 	if (!c->isfloating)
 		c->isfloating = c->oldstate = trans != None || c->isfixed;
 	if (c->isfloating) {
@@ -1130,9 +1116,16 @@ motionnotify(XEvent *e)
 	static Monitor *mon = NULL;
 	Monitor *m;
 	XMotionEvent *ev = &e->xmotion;
+	Client *c;
 
-	if (ev->window != root)
+	if (ev->window != root) {
+		if ((ev->time - lastedgecheck) <= (1000 / 60))
+			return;
+		lastedgecheck = ev->time;
+		if ((c = wintoclient(ev->window)))
+			catchmouseresize(c);
 		return;
+	}
 	if ((m = recttomon(ev->x_root, ev->y_root, 1, 1)) != mon && mon) {
 		unfocus(selmon->sel, 1);
 		selmon = m;
@@ -1327,7 +1320,7 @@ resizeclient(Client *c, int x, int y, int w, int h)
 void
 resizemouse(const Arg *arg)
 {
-	int ocx, ocy, nw, nh, i;
+	int x, y, ocw, och, nw, nh, i;
 	char keydown = 'x';
 	char keystatemap[32];
 	Client *c;
@@ -1342,14 +1335,16 @@ resizemouse(const Arg *arg)
 	if (c->isfullscreen) /* no support resizing fullscreen windows by mouse */
 		return;
 	restack(selmon);
-	ocx = c->x;
-	ocy = c->y;
+	ocw = c->w;
+	och = c->h;
 	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
 		None, cursor[CurResize]->cursor, CurrentTime) != GrabSuccess)
 		return;
 	XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
+	if (!getrootptr(&x, &y))
+		return;
+
 	grabguard = 1;
-	XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w + c->bw - 1, c->h + c->bw - 1);
 	do {
 		XMaskEvent(dpy,
 			MOUSEMASK|ExposureMask|SubstructureRedirectMask|KeyPressMask|KeyReleaseMask,
@@ -1371,8 +1366,8 @@ resizemouse(const Arg *arg)
 				continue;
 			lasttime = ev.xmotion.time;
 
-			nw = MAX(ev.xmotion.x - ocx - 2 * c->bw + 1, 1);
-			nh = MAX(ev.xmotion.y - ocy - 2 * c->bw + 1, 1);
+			nw = MAX(ocw + (ev.xmotion.x - x), 1);
+			nh = MAX(och + (ev.xmotion.y - y), 1);
 			if (c->mon->wx + nw >= selmon->wx
 			&& c->mon->wx + nw <= selmon->wx + selmon->ww
 			&& c->mon->wy + nh >= selmon->wy
@@ -1386,7 +1381,6 @@ resizemouse(const Arg *arg)
 			break;
 		}
 	} while (ev.type != ButtonRelease && keydown);
-	XWarpPointer(dpy, None, c->win, 0, 0, 0, 0, c->w + c->bw - 1, c->h + c->bw - 1);
 	XUngrabPointer(dpy, CurrentTime);
 	XUngrabKeyboard(dpy, CurrentTime);
 	grabguard = 0;
