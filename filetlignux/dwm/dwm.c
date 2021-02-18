@@ -336,7 +336,6 @@ arrange(Monitor *m)
 	unsigned int dui;
 	Window dummy;
 	Window cw;
-	Client *c = NULL;
 
 	if (m)
 		showhide(m->stack);
@@ -349,10 +348,8 @@ arrange(Monitor *m)
 		tile(m);
 	if (m == selmon) {
 		XQueryPointer(dpy, root, &dummy, &cw, &di, &di, &di, &di, &dui);
-		if (cw)
-			c = wintoclient(cw);
-		if (c)
-			grabbuttons(c);
+		if (cw && wintoclient(cw))
+			grabbuttons(wintoclient(cw));
 		else if (selmon->sel)
 			grabbuttons(selmon->sel);
 	}
