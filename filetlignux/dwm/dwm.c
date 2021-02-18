@@ -404,13 +404,11 @@ buttonpress(XEvent *e)
 		else
 			click = ClkWinTitle;
 	} else if ((c = wintoclient(ev->window))) {
+		XAllowEvents(dpy, ReplayPointer, CurrentTime);
 		if (c->isfloating) pop(c);
+		c->mon->raised = c;
 		focus(c);
 		restack(selmon);
-		grabbuttons(c);
-		XAllowEvents(dpy, ReplayPointer, CurrentTime);
-		if (!CLEANMASK(ev->state) && ev->button == Button1)
-			XSendEvent(dpy, c->win, False, None, e);
 		click = ClkClientWin;
 	}
 	for (i = 0; i < LENGTH(buttons); i++)
@@ -937,30 +935,26 @@ grabbuttons(Client *c)
 		unsigned int i, j, dui;
 		unsigned int modifiers[] = {
 			0, LockMask, numlockmask, numlockmask|LockMask };
-		Window dummy;
-		Window cw;
+		Window cw, dummy;
+		Client *cwc = c;
 		Client *fc = NULL;
 
 		XUngrabButton(dpy, AnyButton, AnyModifier, c->win);
-		if (c != selmon->clients)
-			XGrabButton(dpy, AnyButton, AnyModifier, c->win, False,
+
+		XQueryPointer(dpy, root, &dummy, &cw, &di, &di, &di, &di, &dui);
+		if (cw && wintoclient(cw))
+			cwc = wintoclient(cw);
+		for (fc = cwc->mon->stack; fc && !fc->isfloating; fc = fc->snext);
+		if ((cwc->mon->raised && cwc != c->mon->raised)
+		|| (fc && !cwc->mon->raised && cwc != fc))
+			XGrabButton(dpy, AnyButton, AnyModifier, cwc->win, False,
 				BUTTONMASK, GrabModeSync, GrabModeSync, None, None);
+
 		for (i = 0; i < LENGTH(buttons); i++)
 			if (buttons[i].click == ClkClientWin)
 				for (j = 0; j < LENGTH(modifiers); j++)
 					XGrabButton(dpy, buttons[i].button,
 						buttons[i].mask | modifiers[j],
-						c->win, False, BUTTONMASK,
-						GrabModeAsync, GrabModeSync, None, None);
-
-		XQueryPointer(dpy, root, &dummy, &cw, &di, &di, &di, &di, &dui);
-		if (cw && wintoclient(cw))
-			c = wintoclient(cw);
-		for (fc = c->mon->stack; fc && !fc->isfloating; fc = fc->snext);
-		if ((c->mon->raised && c != c->mon->raised)
-		|| (fc && !c->mon->raised && c != fc))
-			for (j = 0; j < LENGTH(modifiers); j++)
-				XGrabButton(dpy, Button1, modifiers[j],
 						c->win, False, BUTTONMASK,
 						GrabModeAsync, GrabModeSync, None, None);
 	}
