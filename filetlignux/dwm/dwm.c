@@ -231,6 +231,7 @@ static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask = 0;
 static unsigned int stackgrabbed = 0;
 static unsigned int grabguard = 0;
+static Monitor *barfocus = NULL;
 static void (*handler[LASTEvent]) (XEvent *) = {
 	[ButtonPress] = buttonpress,
 	[ClientMessage] = clientmessage,
@@ -1117,7 +1118,7 @@ rawmotion(XEvent *e)
 {
 	static Monitor *mon = NULL;
 	Monitor *m;
-	int rx, ry, di;
+	int rx, ry, bf, di;
 	unsigned int dui;
 	Window cw, dummy;
 	Client *c;
@@ -1131,6 +1132,19 @@ rawmotion(XEvent *e)
 		focus(NULL);
 	}
 	mon = m;
+
+	bf = selmon->topbar ? ry <= selmon->my : ry >= selmon->my + selmon->mh - 1;
+	if (bf & (selmon != barfocus)) {
+		XRaiseWindow(dpy, m->barwin);
+		if (selmon->sel)
+			unfocus(selmon->sel, 1);
+	}
+	else if (!bf && barfocus && selmon->sel) {
+		XRaiseWindow(dpy, selmon->sel->win);
+		XSetWindowBorder(dpy, selmon->sel->win, scheme[SchemeSel][ColBorder].pixel);
+		setfocus(selmon->sel);
+	}
+	barfocus = bf ? selmon : NULL;
 
 	if (cw && cw != root && (c = wintoclient(cw)))
 		catchmouseresize(c);
@@ -1419,9 +1433,12 @@ restack(Monitor *m)
 				wc.sibling = c->win;
 			}
 	}
-	XRaiseWindow(dpy, m->barwin);
+	if (!barfocus || barfocus != m)
+		XRaiseWindow(dpy, m->barwin);
 	XRaiseWindow(dpy, m->sel->win);
 	m->raised = m->sel;
+	if (barfocus && barfocus == m)
+		XRaiseWindow(dpy, m->barwin);
 	XSync(dpy, False);
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
 }
