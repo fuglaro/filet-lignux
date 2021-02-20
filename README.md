@@ -1,5 +1,24 @@
 # filet-lignux
+
 A developer's linux configuration - a palatable lean slice.
+
+This project tries to harness the powers of a tiling window manager into a
+clean and simple user interface that is welcoming to users familiar with
+tradition window managers.
+
+Everything in this project should be rigorously upheld to the principle that
+**complexity must justify itself**.
+
+## Installation
+
+Note that this will move aside some configuration files in your home
+directory such as .vimrc and .tmux.conf.
+
+```bash
+git clone git@github.com:fuglaro/filet-lignux.git ~/filet-lignux
+cd ~/filet-lignux
+./install
+```
 
 # Thanks to, grateful forks, and contributions
 

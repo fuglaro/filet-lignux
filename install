@@ -22,7 +22,8 @@ done
 printf "\n\nLinking HOME dir config files...\n\n"
 for file in $(find ~/.config/filetlignux/installs/ -type f); do
 	printf "$(basename $file)\n"
-	if [[ -L ~/$(basename $file) && `readlink ~/$(basename $file)` == `ls -1a ~/.config/filetlignux/installs/$(basename $file)` ]]; then
+	if [[ -L ~/$(basename $file) && `readlink ~/$(basename $file)` \
+	== `ls -1a ~/.config/filetlignux/installs/$(basename $file)` ]]; then
 		printf "...ok\n"
 	elif [ -f ~/$(basename $file) ]; then
 		echo "...moving aside (~/$(basename $file).old)"
