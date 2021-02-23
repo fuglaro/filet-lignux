@@ -877,19 +877,20 @@ killclient(const Arg *arg)
 void
 manage(Window w, XWindowAttributes *wa)
 {
+	int x, y, m;
 	Client *c, *t = NULL;
 	Window trans = None;
 	XWindowChanges wc;
 
 	c = ecalloc(1, sizeof(Client));
 	c->win = w;
+	c->zenping = 0;
 	/* geometry */
 	c->x = c->fx = wa->x;
 	c->y = c->fy = wa->y;
 	c->w = c->fw = wa->width;
 	c->h = c->fh = wa->height;
 	c->oldbw = wa->border_width;
-	c->zenping = 0;
 
 	updatetitle(c);
 	strcpy(c->zenname, c->name);
@@ -900,11 +901,18 @@ manage(Window w, XWindowAttributes *wa)
 		c->tags = tagset[seltags];
 	}
 
-	if (c->x + WIDTH(c) > mons->mx + mons->mw)
-		c->x = c->fx = mons->mx + mons->mw - WIDTH(c);
-	if (c->y + HEIGHT(c) > mons->my + mons->mh)
-		c->y = c->fy = mons->my + mons->mh - HEIGHT(c);
-	c->x = c->fx = MAX(c->x, mons->mx);
+	/* find current monitor */
+	if (getrootptr(&x, &y)) {
+		for (m = 0; m < LENGTH(mons) && !INMON(x, y, mons[m]); m++);
+		if (m == LENGTH(mons))
+			m = 0;
+	} else m = 0;
+	/* adjust to current monitor */
+	if (c->x + WIDTH(c) > mons[m].mx + mons[m].mw)
+		c->x = c->fx = mons[m].mx + mons[m].mw - WIDTH(c);
+	if (c->y + HEIGHT(c) > mons[m].my + mons[m].mh)
+		c->y = c->fy = mons[m].my + mons[m].mh - HEIGHT(c);
+	c->x = c->fx = MAX(c->x, mons[m].mx);
 	/* only fix client y-offset, if the client center might cover the bar */
 	c->y = c->fy =
 		MAX(c->y, ((by == mons->my) && (c->x + (c->w / 2) >= mons->mx)
