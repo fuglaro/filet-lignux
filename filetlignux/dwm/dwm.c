@@ -214,6 +214,7 @@ static unsigned int numlockmask = 0;
 static int stackgrabbed = 0;
 static int grabguard = 0;
 static int barfocus = 0;
+static Window *lastraised = NULL;
 unsigned int seltags;
 unsigned int tagset[2];
 static void (*handler[LASTEvent]) (XEvent *) = {
@@ -231,7 +232,7 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 	[MapRequest] = maprequest,
 	[PropertyNotify] = propertynotify,
 	[UnmapNotify] = unmapnotify,
-	[XI_RawMotion] = rawmotion
+	[XI_RawMotion] = rawmotion,
 };
 static Atom wmatom[WMLast], netatom[NetLast];
 static int running = 1;
@@ -971,6 +972,8 @@ rawmotion(XEvent *e)
 	if (!XQueryPointer(dpy, root, &dummy, &cw, &rx, &ry, &di, &di, &dui))
 		return;
 
+	/* top bar raise when mouse hits the screen edge.
+	   especially useful for apps that capture the kayboard. */
 	bf = topbar ? ry <= mons->my : ry >= mons->my + mons->mh - 1;
 	bf = bf && (rx >= mons->mx) && (rx <= mons->mx + mons->mw);
 	if (bf & barfocus) {
@@ -979,12 +982,13 @@ rawmotion(XEvent *e)
 			unfocus(sel, 1);
 	}
 	else if (!bf && barfocus && sel) {
-		XRaiseWindow(dpy, sel->win);
+		XRaiseWindow(dpy, lastraised ? *lastraised : sel->win);
 		XSetWindowBorder(dpy, sel->win, scheme[SchemeSel][ColBorder].pixel);
 		setfocus(sel);
 	}
 	barfocus = bf;
 
+	/* watch for border edge locations for resizing */
 	if (cw && cw != root && (c = wintoclient(cw)))
 		catchmouseresize(c);
 }
@@ -1256,6 +1260,7 @@ restack(void)
 	}
 	if (!barfocus)
 		XRaiseWindow(dpy, barwin);
+	lastraised = &sel->win;
 	XRaiseWindow(dpy, sel->win);
 	raised = sel;
 	if (barfocus)
@@ -1462,7 +1467,7 @@ setup(void)
 	XSelectInput(dpy, root, wa.event_mask);
 	/* select xinput events */
 	if (XQueryExtension(dpy, "XInputExtension", &di, &di, &di)
-	&& XIQueryVersion(dpy, &(int){2}, &(int){0}) != Success) {
+	&& XIQueryVersion(dpy, &(int){2}, &(int){0}) == Success) {
 		XISetMask(xi, XI_RawMotion);
 		evm.deviceid = XIAllMasterDevices;
 		evm.mask_len = sizeof(xi);

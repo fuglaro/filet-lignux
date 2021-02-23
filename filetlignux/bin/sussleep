@@ -1,5 +1,5 @@
 #!/bin/bash
 
-systemctl suspend -i
-slock
+killall slock
+slock systemctl suspend -i
 
