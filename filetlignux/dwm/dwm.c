@@ -62,6 +62,8 @@
 #define MONNULL(M)          (M.mx == 0 && M.my == 0 && M.mw == 0 && M.mh == 0)
 #define SETMON(M, R)            {M.mx = R.x; M.my = R.y;\
                                  M.mw = R.width; M.mh = R.height;}
+#define INMON(X, Y, M)          (X >= M.mx && X < M.mx + M.mw &&\
+                                 Y >= M.my && Y < M.my + M.mh)
 #define WIDTH(X)                ((X)->w + 2 * (X)->bw)
 #define HEIGHT(X)               ((X)->h + 2 * (X)->bw)
 #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
@@ -1356,6 +1358,8 @@ setfocus(Client *c)
 void
 setfullscreen(Client *c, int fullscreen)
 {
+	int w, h, m1, m2;
+
 	if (fullscreen && !c->isfullscreen) {
 		XChangeProperty(dpy, c->win, netatom[NetWMState], XA_ATOM, 32,
 			PropModeReplace, (unsigned char*)&netatom[NetWMFullscreen], 1);
@@ -1364,10 +1368,22 @@ setfullscreen(Client *c, int fullscreen)
 		c->oldbw = c->bw;
 		c->bw = 0;
 		c->isfloating = 1;
-		resizeclient(c, mons->mx, mons->my, mons->mw, mons->mh); //TODO monitor aware
+		/* find the full screen spread across the monitors */
+		for (m1 = 0; m1 < LENGTH(mons) && !INMON(c->x, c->y, mons[m1]); m1++);
+		if (m1 == LENGTH(mons))
+			m1 = 0;
+		for (m2 = 0; m2 < LENGTH(mons)
+		&& !INMON(c->x + c->w, c->y + c->h, mons[m2]); m2++);
+		if (m2 == LENGTH(mons))
+			m2 = m1;
+		/* apply fullscreen window parameters */
+		w = mons[m2].mx - mons[m1].mx + mons[m2].mw;
+		h = mons[m2].my - mons[m1].my + mons[m2].mh;
+		resizeclient(c, mons[m1].mx, mons[m1].my, w, h);
 		XRaiseWindow(dpy, c->win);
 		raised = c;
 	} else if (!fullscreen && c->isfullscreen){
+		/* change back to original floating parameters */
 		XChangeProperty(dpy, c->win, netatom[NetWMState], XA_ATOM, 32,
 			PropModeReplace, (unsigned char*)0, 0);
 		c->isfullscreen = 0;
