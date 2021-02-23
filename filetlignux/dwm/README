@@ -1,7 +1,31 @@
-dwm - dynamic window manager
-============================
-dwm is an extremely fast, small, and dynamic window manager for X.
+filletlignux's dwm - dynamic window manager
+===========================================
+This is a minimal fork to dwm.
 
+Changes to dwm focus on the default behaviour being more familiar
+to users of less-leet window managers, while still supporting all
+productivity boosting behaviours. Consider this like a gateway
+drug to the beauty of dwm.
+
+- There is only the tiled layout but windows will launch in floating mode.
+- Fullscreen mode for each client window replaces the monocle layout.
+- Less daunting bar arrangement.
+- Additional window states:
+	* raised - visible above all other windows, even if tiled.
+	* zoomed - at the top of the stack (also applies to floating windows).
+- Changed bindings to be closer to less-leet window managers.
+	* Alt+Tab combos raise windows temporarily, and then zoom on release.
+- Mouse resize controls at the edge of windows.
+- Changed multi-monitor behavior:
+	* Unified cross-monitor client window stack.
+	* Unified cross-monitor tags (workspaces).
+	* The primary monitor gets the bar.
+	* Fullscreen arrangements are based on the monitor position of
+	  the client window when floating (First top-left then bottom-right).
+	* Tiling arrangements are based on the monitor position of the client
+	  window when floating (top-left).
+	* Monitor configuration can be manually defined allowing for
+	  overlapping monitor regions.
 
 Requirements
 ------------

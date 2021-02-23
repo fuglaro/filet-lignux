@@ -15,7 +15,7 @@
  *     * zoomed - at the top of the stack (also applies to floating windows).
  * - Changed bindings to be closer to less-leet window managers.
  *     * Alt+Tab combos raise windows temporarily, and then zoom on release.
-*/
+ * - Mouse resize controls at the edge of windows. */
 
 #include <X11/XF86keysym.h>
 
@@ -23,8 +23,8 @@
 static const unsigned int borderpx  = 2; /* border pixel of windows */
 static const unsigned int snap      = 8; /* snap pixel */
 static const int topbar             = 1; /* 0 means bottom bar */
-static const Time zenmode           = 3; /* if set, delays showing
-                                            rapid sequences of client driven
+static const Time zenmode           = 3; /* if set, delays showing rapid
+                                            sequences of client triggered
                                             window title changes until the
                                             next natural refresh. */
 static const char *fonts[]          = { "monospace:bold:size=4" };
@@ -44,7 +44,19 @@ static const char *colors[][3]      = {
 /* tagging */
 static const char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
 
-/* layout */
+/* layout
+ * Set mons to the number of monitors you want supported.
+ * Initialise with {0} for autodetection of monitors,
+ * otherwise set the position and size ({x,y,w,h}).
+ * The first monitor will be the primary monitor and have the bar.
+ * e.g:
+static Monitor mons[3] = {
+	{2420, 0, 1020, 1080},
+	{1920, 0, 2420, 1080},
+	{3440, 0, 400,  1080}
+};
+*/
+static Monitor mons[] = {{0}, {0}, {0}};
 static const float mfact     = 0.55; /* factor of master area size [0.05..0.95] */
 static const int nmaster     = 1;    /* number of clients in master area */
 static const int resizehints = 1;    /* 1 means respect size hints in tiled resizals */
@@ -53,8 +65,7 @@ static const int resizehints = 1;    /* 1 means respect size hints in tiled resi
 static const char lsymbol[] = ">";
 
 /* commands */
-static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
-static const char *dmenucmd[] = { "dmenu_run", "-p", ">", "-m", dmenumon, "-i", "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
+static const char *dmenucmd[] = { "dmenu_run", "-p", ">", "-m", "0", "-i", "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
 static const char *termcmd[] = { "st", NULL };
 static const char *lockcmd[] = { "slock", NULL };
 static const char *upvol[]   = { "volumeup", NULL };
@@ -134,6 +145,7 @@ static Key keys[] = {
 	TAGKEYS( XK_7, 6)
 	TAGKEYS( XK_8, 7)
 	TAGKEYS( XK_9, 8)
+
 	{                 MODKEY|ShiftMask, XK_0, tag, {.ui = ~0 } },
 	{            MODKEY|ControlMask, XK_Left, focusview, {.i = -1 } },
 	{           MODKEY|ControlMask, XK_Right, focusview, {.i = +1 } },
@@ -150,8 +162,7 @@ static Key keys[] = {
 
 /* button definitions
  * click can be ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle,
- * ClkClientWin, or ClkRootWin
- */
+ * ClkClientWin, or ClkRootWin */
 static Button buttons[] = {
 	/* click,         mask / button, function / argument */
 	{ ClkLtSymbol,       0, Button1, spawn, {.v = dmenucmd } },

@@ -8,7 +8,7 @@ pkill -f "conky .*/statusbar\.config.*--display=$DISPLAY"
 conky -c ~/.config/filetlignux/conky/statusbar.config --display=$DISPLAY | ~/.config/filetlignux/xrootname/xrootname &
 
 # Apply background
-feh --bg-scale ~/.config/filetlignux/theme/background.jpg
+feh --bg-tile ~/.config/filetlignux/theme/background.jpg
 
 # Launch the Window Manager
 ~/.config/filetlignux/dwm/dwm
