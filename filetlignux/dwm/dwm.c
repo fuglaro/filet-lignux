@@ -48,9 +48,6 @@
 #define CLEANMASK(mask)      (mask & ~(numlockmask|LockMask)\
                               & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask\
                                  |Mod3Mask|Mod4Mask|Mod5Mask))
-#define INTERSECT(x,y,w,h,m)\
-                   (MAX(0, MIN((x)+(w),(m)->mx+(m)->mw) - MAX((x),(m)->mx))\
-                    * MAX(0, MIN((y)+(h),(m)->my+(m)->mh) - MAX((y),(m)->my)))
 #define ISVISIBLE(C)            ((C->tags & tagset[seltags]))
 #define LENGTH(X)               (sizeof X / sizeof X[0])
 #define MOUSEMASK               (BUTTONMASK|PointerMotionMask)
@@ -791,11 +788,12 @@ grabresize(const Arg *arg) {
 	XEvent ev;
 	Time lasttime = 0;
 
-	if (grabguard)
+	/* prevent keyrepeats interfering with grabs,
+	   only grab if there is a selected window,
+	   no support moving fullscreen windows by mouse */
+	if (grabguard || !(c = sel) || c->isfullscreen)
 		return;
-	if (!(c = sel))
-		return;
-	if (c->isfullscreen) /* no support moving fullscreen windows by mouse */
+	if (!getrootptr(&x, &y))
 		return;
 	restack();
 	nc = oc = *c;
@@ -804,8 +802,6 @@ grabresize(const Arg *arg) {
 		!= GrabSuccess)
 		return;
 	XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
-	if (!getrootptr(&x, &y))
-		return;
 
 	grabguard = 1;
 	do {
@@ -879,12 +875,12 @@ grabresize(const Arg *arg) {
 
 void
 grabresizecheck(Client *c) {
-	int x, y, di, abort = 0;
+	int x, y, di;
 	unsigned int mask, dui;
 	Window dummy, cw;
 	XEvent ev;
 
-	if (!(c = sel) || c->isfullscreen || !c->bw || !c->isfloating)
+	if (!(c = sel) || c->isfullscreen)
 		return;
 	if (!XQueryPointer(dpy, root, &dummy, &dummy, &x, &y, &di, &di, &mask))
 		return;
@@ -903,7 +899,6 @@ grabresizecheck(Client *c) {
 		switch(ev.type) {
 		case KeyPress:
 			XUngrabPointer(dpy, CurrentTime);
-			abort = 1;
 		case ConfigureRequest:
 		case Expose:
 		case MapRequest:
@@ -921,8 +916,8 @@ grabresizecheck(Client *c) {
 					grabresize(&(Arg){.i = DragSize});
 			}
 		}
-	} while (ev.type != ButtonPress && ev.type != ButtonRelease && !abort
-		&& (MOVEZONE(c, x, y) || RESIZEZONE(c, x, y)));
+	} while (ev.type != ButtonPress && ev.type != ButtonRelease
+		&& ev.type != KeyPress && (MOVEZONE(c, x, y) || RESIZEZONE(c, x, y)));
 	XUngrabPointer(dpy, CurrentTime);
 
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
