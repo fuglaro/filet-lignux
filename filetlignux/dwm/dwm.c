@@ -127,7 +127,6 @@ struct Monitor {
 /* function declarations */
 static int applysizehints(Client *c, int *x, int *y, int *w, int *h);
 static void arrange(void);
-static void tile(void);
 static void attach(Client *c);
 static void buttonpress(XEvent *e);
 static void checkotherwm(void);
@@ -145,7 +144,6 @@ static void focus(Client *c);
 static void focusin(XEvent *e);
 static void focusstack(const Arg *arg);
 static void focusview(const Arg *arg);
-static void grabstack(const Arg *arg);
 static Atom getatomprop(Client *c, Atom prop);
 static int getrootptr(int *x, int *y);
 static long getstate(Window w);
@@ -153,6 +151,7 @@ static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 static void grabbuttons(Client *c);
 static void grabkeys(void);
 static void grabresize(const Arg *arg);
+static void grabstack(const Arg *arg);
 static void keypress(XEvent *e);
 static void keyrelease(XEvent *e);
 static void killclient(const Arg *arg);
@@ -176,10 +175,12 @@ static void setfocus(Client *c);
 static void setfullscreen(Client *c, int fullscreen);
 static void setup(void);
 static void seturgent(Client *c, int urg);
+unsigned int shiftviews(unsigned int v, int i);
 static void showhide(Client *c);
 static void sigchld(int unused);
 static void spawn(const Arg *arg);
 static void tag(const Arg *arg);
+static void tile(void);
 static void togglefloating(const Arg *arg);
 static void togglefullscreen(const Arg *arg);
 static void toggletag(const Arg *arg);
@@ -556,6 +557,59 @@ drawbar(int zen)
 	drw_map(drw, barwin, 0, 0, mons->mw, bh);
 }
 
+void
+enternotify(XEvent *e)
+{
+	Client *c;
+	XCrossingEvent *ev = &e->xcrossing;
+
+	if ((ev->mode != NotifyNormal || ev->detail == NotifyInferior) && ev->window != root)
+		return;
+	if ((c = wintoclient(ev->window)) != sel)
+		focus(c);
+}
+
+void
+exthandler(XEvent *ev)
+{
+	if (handler[ev->xcookie.evtype])
+		handler[ev->xcookie.evtype](ev); /* call handler */
+}
+
+void
+expose(XEvent *e)
+{
+	XExposeEvent *ev = &e->xexpose;
+
+	if (ev->count == 0)
+		drawbar(0);
+}
+
+void
+focus(Client *c)
+{
+	if (!c || !ISVISIBLE(c)){
+		if (sel)
+			for (c = sel; c && !ISVISIBLE(c); c = c->next);
+		for (c = clients; c && !ISVISIBLE(c); c = c->next);
+	}
+	if (sel && sel != c)
+		unfocus(sel, 0);
+	if (c) {
+		if (c->isurgent)
+			seturgent(c, 0);
+		grabbuttons(c);
+		XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
+		setfocus(c);
+	} else {
+		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
+		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
+		raised = c;
+	}
+	sel = c;
+	drawbar(0);
+}
+
 /* there are some broken focus acquiring clients needing extra handling */
 void
 focusin(XEvent *e)
@@ -590,6 +644,132 @@ focusstack(const Arg *arg)
 		focus(c);
 		restack();
 		grabbuttons(c);
+	}
+}
+
+void
+focusview(const Arg *arg)
+{
+	tagset[seltags] = shiftviews(tagset[seltags], arg->i);
+	focus(NULL);
+	arrange();
+}
+
+Atom
+getatomprop(Client *c, Atom prop)
+{
+	int di;
+	unsigned long dl;
+	unsigned char *p = NULL;
+	Atom da, atom = None;
+
+	if (XGetWindowProperty(dpy, c->win, prop, 0L, sizeof atom, False, XA_ATOM,
+		&da, &di, &dl, &dl, &p) == Success && p) {
+		atom = *(Atom *)p;
+		XFree(p);
+	}
+	return atom;
+}
+
+int
+getrootptr(int *x, int *y)
+{
+	int di;
+	unsigned int dui;
+	Window dummy;
+
+	return XQueryPointer(dpy, root, &dummy, &dummy, x, y, &di, &di, &dui);
+}
+
+long
+getstate(Window w)
+{
+	int format;
+	long result = -1;
+	unsigned char *p = NULL;
+	unsigned long n, extra;
+	Atom real;
+
+	if (XGetWindowProperty(dpy, w, wmatom[WMState], 0L, 2L, False, wmatom[WMState],
+		&real, &format, &n, &extra, (unsigned char **)&p) != Success)
+		return -1;
+	if (n != 0)
+		result = *p;
+	XFree(p);
+	return result;
+}
+
+int
+gettextprop(Window w, Atom atom, char *text, unsigned int size)
+{
+	char **list = NULL;
+	int n;
+	XTextProperty name;
+
+	if (!text || size == 0)
+		return 0;
+	text[0] = '\0';
+	if (!XGetTextProperty(dpy, w, &name, atom) || !name.nitems)
+		return 0;
+	if (name.encoding == XA_STRING)
+		strncpy(text, (char *)name.value, size - 1);
+	else {
+		if (XmbTextPropertyToTextList(dpy, &name, &list, &n) >= Success && n > 0 && *list) {
+			strncpy(text, *list, size - 1);
+			XFreeStringList(list);
+		}
+	}
+	text[size - 1] = '\0';
+	XFree(name.value);
+	return 1;
+}
+
+void
+grabbuttons(Client *c)
+{
+	updatenumlockmask();
+	{
+		int di;
+		unsigned int i, j, dui;
+		unsigned int modifiers[] = {
+			0, LockMask, numlockmask, numlockmask|LockMask };
+		Window cw, dummy;
+		Client *cwc = NULL;
+
+		XUngrabButton(dpy, AnyButton, AnyModifier, c->win);
+
+		XQueryPointer(dpy, root, &dummy, &cw, &di, &di, &di, &di, &dui);
+		if (cw && (cwc = wintoclient(cw)))
+			if ((cwc != raised) || (cwc->isfloating && cwc != clients))
+				XGrabButton(dpy, AnyButton, AnyModifier, cwc->win, False,
+					BUTTONMASK, GrabModeSync, GrabModeSync, None, None);
+
+		for (i = 0; i < LENGTH(buttons); i++)
+			if (buttons[i].click == ClkClientWin)
+				for (j = 0; j < LENGTH(modifiers); j++)
+					XGrabButton(dpy, buttons[i].button,
+						buttons[i].mask | modifiers[j],
+						c->win, False, BUTTONMASK,
+						GrabModeAsync, GrabModeSync, None, None);
+	}
+}
+
+void
+grabkeys(void)
+{
+	updatenumlockmask();
+	{
+		unsigned int i, j;
+		unsigned int modifiers[] = {
+			0, LockMask, numlockmask, numlockmask|LockMask };
+		KeyCode code;
+
+		XUngrabKey(dpy, AnyKey, AnyModifier, root);
+		for (i = 0; i < LENGTH(keys); i++)
+			if ((code = XKeysymToKeycode(dpy, keys[i].keysym)))
+				for (j = 0; j < LENGTH(modifiers); j++)
+					XGrabKey(dpy, code, keys[i].mod | modifiers[j], root,
+						True, GrabModeAsync, GrabModeAsync);
 	}
 }
 
@@ -745,60 +925,6 @@ grabresizecheck(Client *c) {
 		focus(c);
 }
 
-void
-enternotify(XEvent *e)
-{
-	Client *c;
-	XCrossingEvent *ev = &e->xcrossing;
-
-	if ((ev->mode != NotifyNormal || ev->detail == NotifyInferior) && ev->window != root)
-		return;
-	if ((c = wintoclient(ev->window)) != sel)
-		focus(c);
-}
-
-void
-exthandler(XEvent *ev)
-{
-	if (handler[ev->xcookie.evtype])
-		handler[ev->xcookie.evtype](ev); /* call handler */
-}
-
-void
-expose(XEvent *e)
-{
-	XExposeEvent *ev = &e->xexpose;
-
-	if (ev->count == 0)
-		drawbar(0);
-}
-
-void
-focus(Client *c)
-{
-	if (!c || !ISVISIBLE(c)){
-		if (sel)
-			for (c = sel; c && !ISVISIBLE(c); c = c->next);
-		for (c = clients; c && !ISVISIBLE(c); c = c->next);
-	}
-	if (sel && sel != c)
-		unfocus(sel, 0);
-	if (c) {
-		if (c->isurgent)
-			seturgent(c, 0);
-		grabbuttons(c);
-		XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
-		setfocus(c);
-	} else {
-		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
-		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
-		raised = c;
-	}
-	sel = c;
-	drawbar(0);
-}
-
-
 
 void
 grabstack(const Arg *arg)
@@ -808,124 +934,6 @@ grabstack(const Arg *arg)
 			CurrentTime);
 	stackgrabbed = 1;
 	focusstack(arg);
-}
-
-Atom
-getatomprop(Client *c, Atom prop)
-{
-	int di;
-	unsigned long dl;
-	unsigned char *p = NULL;
-	Atom da, atom = None;
-
-	if (XGetWindowProperty(dpy, c->win, prop, 0L, sizeof atom, False, XA_ATOM,
-		&da, &di, &dl, &dl, &p) == Success && p) {
-		atom = *(Atom *)p;
-		XFree(p);
-	}
-	return atom;
-}
-
-int
-getrootptr(int *x, int *y)
-{
-	int di;
-	unsigned int dui;
-	Window dummy;
-
-	return XQueryPointer(dpy, root, &dummy, &dummy, x, y, &di, &di, &dui);
-}
-
-long
-getstate(Window w)
-{
-	int format;
-	long result = -1;
-	unsigned char *p = NULL;
-	unsigned long n, extra;
-	Atom real;
-
-	if (XGetWindowProperty(dpy, w, wmatom[WMState], 0L, 2L, False, wmatom[WMState],
-		&real, &format, &n, &extra, (unsigned char **)&p) != Success)
-		return -1;
-	if (n != 0)
-		result = *p;
-	XFree(p);
-	return result;
-}
-
-int
-gettextprop(Window w, Atom atom, char *text, unsigned int size)
-{
-	char **list = NULL;
-	int n;
-	XTextProperty name;
-
-	if (!text || size == 0)
-		return 0;
-	text[0] = '\0';
-	if (!XGetTextProperty(dpy, w, &name, atom) || !name.nitems)
-		return 0;
-	if (name.encoding == XA_STRING)
-		strncpy(text, (char *)name.value, size - 1);
-	else {
-		if (XmbTextPropertyToTextList(dpy, &name, &list, &n) >= Success && n > 0 && *list) {
-			strncpy(text, *list, size - 1);
-			XFreeStringList(list);
-		}
-	}
-	text[size - 1] = '\0';
-	XFree(name.value);
-	return 1;
-}
-
-void
-grabbuttons(Client *c)
-{
-	updatenumlockmask();
-	{
-		int di;
-		unsigned int i, j, dui;
-		unsigned int modifiers[] = {
-			0, LockMask, numlockmask, numlockmask|LockMask };
-		Window cw, dummy;
-		Client *cwc = NULL;
-
-		XUngrabButton(dpy, AnyButton, AnyModifier, c->win);
-
-		XQueryPointer(dpy, root, &dummy, &cw, &di, &di, &di, &di, &dui);
-		if (cw && (cwc = wintoclient(cw)))
-			if ((cwc != raised) || (cwc->isfloating && cwc != clients))
-				XGrabButton(dpy, AnyButton, AnyModifier, cwc->win, False,
-					BUTTONMASK, GrabModeSync, GrabModeSync, None, None);
-
-		for (i = 0; i < LENGTH(buttons); i++)
-			if (buttons[i].click == ClkClientWin)
-				for (j = 0; j < LENGTH(modifiers); j++)
-					XGrabButton(dpy, buttons[i].button,
-						buttons[i].mask | modifiers[j],
-						c->win, False, BUTTONMASK,
-						GrabModeAsync, GrabModeSync, None, None);
-	}
-}
-
-void
-grabkeys(void)
-{
-	updatenumlockmask();
-	{
-		unsigned int i, j;
-		unsigned int modifiers[] = {
-			0, LockMask, numlockmask, numlockmask|LockMask };
-		KeyCode code;
-
-		XUngrabKey(dpy, AnyKey, AnyModifier, root);
-		for (i = 0; i < LENGTH(keys); i++)
-			if ((code = XKeysymToKeycode(dpy, keys[i].keysym)))
-				for (j = 0; j < LENGTH(modifiers); j++)
-					XGrabKey(dpy, code, keys[i].mod | modifiers[j], root,
-						True, GrabModeAsync, GrabModeAsync);
-	}
 }
 
 void
@@ -1065,6 +1073,14 @@ maprequest(XEvent *e)
 		return;
 	if (!wintoclient(ev->window))
 		manage(ev->window, &wa);
+}
+
+void
+moveview(const Arg *arg)
+{
+	if (sel)
+		sel->tags = shiftviews(sel->tags, arg->i);
+	focusview(arg);
 }
 
 Client *
@@ -1349,12 +1365,6 @@ setfullscreen(Client *c, int fullscreen)
 }
 
 void
-togglefullscreen(const Arg *arg)
-{
-	if (sel) setfullscreen(sel, !sel->isfullscreen);
-}
-
-void
 setup(void)
 {
 	int i, di, xre;
@@ -1459,6 +1469,13 @@ seturgent(Client *c, int urg)
 	XFree(wmh);
 }
 
+unsigned int
+shiftviews(unsigned int v, int i) {
+	if (i < 0)
+		return (v >> -i) | (v << (LENGTH(tags) + i));
+	return (v << i) | (v >> (LENGTH(tags) - i));
+}
+
 void
 showhide(Client *c)
 {
@@ -1551,6 +1568,12 @@ togglefloating(const Arg *arg)
 			sel->fw, sel->fh);
 	}
 	arrange();
+}
+
+void
+togglefullscreen(const Arg *arg)
+{
+	if (sel) setfullscreen(sel, !sel->isfullscreen);
 }
 
 void
@@ -1789,30 +1812,6 @@ updatewmhints(Client *c)
 			c->neverfocus = 0;
 		XFree(wmh);
 	}
-}
-
-unsigned int
-shiftviews(unsigned int v, int i) {
-	if (i < 0)
-		return (v >> -i) | (v << (LENGTH(tags) + i));
-	return (v << i) | (v >> (LENGTH(tags) - i));
-}
-
-void
-focusview(const Arg *arg)
-{
-	tagset[seltags] = shiftviews(tagset[seltags], arg->i);
-	focus(NULL);
-	arrange();
-}
-
-void
-moveview(const Arg *arg)
-{
-	if (sel)
-		sel->tags = shiftviews(
-			sel->tags, arg->i);
-	focusview(arg);
 }
 
 void
