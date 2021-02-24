@@ -175,7 +175,7 @@ static void setfocus(Client *c);
 static void setfullscreen(Client *c, int fullscreen);
 static void setup(void);
 static void seturgent(Client *c, int urg);
-unsigned int shiftviews(unsigned int v, int i);
+static unsigned int shiftviews(unsigned int v, int i);
 static void showhide(Client *c);
 static void sigchld(int unused);
 static void spawn(const Arg *arg);
@@ -188,7 +188,6 @@ static void toggleview(const Arg *arg);
 static void unfocus(Client *c, int setfocus);
 static void unmanage(Client *c, int destroyed);
 static void unmapnotify(XEvent *e);
-static void updatebars(void);
 static void updateclientlist(void);
 static void updatemonitors(XEvent *e);
 static void updatenumlockmask(void);
@@ -217,8 +216,8 @@ static unsigned int numlockmask = 0;
 static int stackgrabbed = 0;
 static int barfocus = 0;
 static Window *lastraised = NULL;
-unsigned int seltags;
-unsigned int tagset[2];
+static unsigned int seltags;
+static unsigned int tagset[2];
 static void (*handler[LASTEvent]) (XEvent *) = {
 	[ButtonPress] = buttonpress,
 	[ClientMessage] = clientmessage,
@@ -367,9 +366,11 @@ buttonpress(XEvent *e)
 		click = ClkClientWin;
 	}
 	for (i = 0; i < LENGTH(buttons); i++)
-		if (click == buttons[i].click && buttons[i].func && buttons[i].button == ev->button
+		if (click == buttons[i].click && buttons[i].func
+		&& buttons[i].button == ev->button
 		&& CLEANMASK(buttons[i].mask) == CLEANMASK(ev->state))
-			buttons[i].func(click == ClkTagBar && buttons[i].arg.i == 0 ? &arg : &buttons[i].arg);
+			buttons[i].func(click == ClkTagBar && buttons[i].arg.i == 0
+				? &arg : &buttons[i].arg);
 }
 
 void
@@ -419,7 +420,8 @@ clientmessage(XEvent *e)
 		if (cme->data.l[1] == netatom[NetWMFullscreen]
 		|| cme->data.l[2] == netatom[NetWMFullscreen])
 			setfullscreen(c, (cme->data.l[0] == 1 /* _NET_WM_STATE_ADD    */
-				|| (cme->data.l[0] == 2 /* _NET_WM_STATE_TOGGLE */ && !c->isfullscreen)));
+				|| (cme->data.l[0] == 2 /* _NET_WM_STATE_TOGGLE */
+				&& !c->isfullscreen)));
 	} else if (cme->message_type == netatom[NetActiveWindow]) {
 		if (c != sel && !c->isurgent)
 			seturgent(c, 1);
@@ -464,7 +466,8 @@ configurerequest(XEvent *e)
 				c->w = c->fw = ev->width;
 			if (ev->value_mask & CWHeight)
 				c->h = c->fw = ev->height;
-			if ((ev->value_mask & (CWX|CWY)) && !(ev->value_mask & (CWWidth|CWHeight)))
+			if ((ev->value_mask & (CWX|CWY))
+			&& !(ev->value_mask & (CWWidth|CWHeight)))
 				configure(c);
 			if (ISVISIBLE(c))
 				XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
@@ -529,7 +532,8 @@ drawbar(int zen)
 	x = vw;
 	for (i = 0; i < LENGTH(tags); i++) {
 		w = TEXTW(tags[i]);
-		drw_setscheme(drw, scheme[tagset[seltags] & 1 << i ? SchemeSel : SchemeNorm]);
+		drw_setscheme(drw, scheme[tagset[seltags] & 1 << i
+			? SchemeSel : SchemeNorm]);
 		drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
 		if (occ & 1 << i)
 			drw_rect(drw, x + boxs, boxs, boxw, boxw,
@@ -563,7 +567,8 @@ enternotify(XEvent *e)
 	Client *c;
 	XCrossingEvent *ev = &e->xcrossing;
 
-	if ((ev->mode != NotifyNormal || ev->detail == NotifyInferior) && ev->window != root)
+	if ((ev->mode != NotifyNormal || ev->detail == NotifyInferior)
+	&& ev->window != root)
 		return;
 	if ((c = wintoclient(ev->window)) != sel)
 		focus(c);
@@ -690,8 +695,9 @@ getstate(Window w)
 	unsigned long n, extra;
 	Atom real;
 
-	if (XGetWindowProperty(dpy, w, wmatom[WMState], 0L, 2L, False, wmatom[WMState],
-		&real, &format, &n, &extra, (unsigned char **)&p) != Success)
+	if (XGetWindowProperty(dpy, w, wmatom[WMState], 0L, 2L, False,
+		wmatom[WMState], &real, &format, &n, &extra,
+		(unsigned char **)&p) != Success)
 		return -1;
 	if (n != 0)
 		result = *p;
@@ -714,7 +720,8 @@ gettextprop(Window w, Atom atom, char *text, unsigned int size)
 	if (name.encoding == XA_STRING)
 		strncpy(text, (char *)name.value, size - 1);
 	else {
-		if (XmbTextPropertyToTextList(dpy, &name, &list, &n) >= Success && n > 0 && *list) {
+		if (XmbTextPropertyToTextList(dpy, &name, &list, &n) >= Success
+		&& n > 0 && *list) {
 			strncpy(text, *list, size - 1);
 			XFreeStringList(list);
 		}
@@ -1040,9 +1047,10 @@ manage(Window w, XWindowAttributes *wa)
 	}
 	attach(c);
 	grabbuttons(c);
-	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32, PropModeAppend,
-		(unsigned char *) &(c->win), 1);
-	XMoveResizeWindow(dpy, c->win, c->x + 2 * sw, c->y, c->w, c->h); /* some windows require this */
+	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32,
+		PropModeAppend, (unsigned char *) &(c->win), 1);
+	/* some windows require this */
+	XMoveResizeWindow(dpy, c->win, c->x + 2 * sw, c->y, c->w, c->h);
 	setclientstate(c, NormalState);
 	unfocus(sel, 0);
 	sel = c;
@@ -1398,9 +1406,11 @@ setup(void)
 	netatom[NetWMName] = XInternAtom(dpy, "_NET_WM_NAME", False);
 	netatom[NetWMState] = XInternAtom(dpy, "_NET_WM_STATE", False);
 	netatom[NetWMCheck] = XInternAtom(dpy, "_NET_SUPPORTING_WM_CHECK", False);
-	netatom[NetWMFullscreen] = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
+	netatom[NetWMFullscreen] = XInternAtom(
+		dpy, "_NET_WM_STATE_FULLSCREEN", False);
 	netatom[NetWMWindowType] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
-	netatom[NetWMWindowTypeDialog] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DIALOG", False);
+	netatom[NetWMWindowTypeDialog] = XInternAtom(
+		dpy, "_NET_WM_WINDOW_TYPE_DIALOG", False);
 	netatom[NetClientList] = XInternAtom(dpy, "_NET_CLIENT_LIST", False);
 	/* init cursors */
 	cursor[CurNormal] = drw_cur_create(drw, XC_left_ptr);
@@ -1433,9 +1443,18 @@ setup(void)
 		}
 	}
 	by = topbar ? mons->my : mons->my + WINH(mons[0]);
-	/* init bars */
-	updatebars();
-	updatestatus();
+	/* init bars */ {
+		barwin = XCreateWindow(dpy, root, mons->mx, by, mons->mw, bh, 0,
+			DefaultDepth(dpy, screen), CopyFromParent, DefaultVisual(dpy, screen),
+			CWOverrideRedirect|CWBackPixmap|CWEventMask, &(XSetWindowAttributes){
+				.override_redirect = True,
+				.background_pixmap = ParentRelative,
+				.event_mask = ButtonPressMask|ExposureMask});
+		XDefineCursor(dpy, barwin, cursor[CurNormal]->cursor);
+		XMapRaised(dpy, barwin);
+		XSetClassHint(dpy, barwin, &(XClassHint){"dwm", "dwm"});
+		updatestatus();
+	}
 	/* select events */
 	wa.cursor = cursor[CurNormal]->cursor;
 	wa.event_mask = SubstructureRedirectMask|SubstructureNotifyMask
@@ -1465,7 +1484,7 @@ seturgent(Client *c, int urg)
 	c->isurgent = urg;
 	if (!(wmh = XGetWMHints(dpy, c->win)))
 		return;
-	wmh->flags = urg ? (wmh->flags | XUrgencyHint) : (wmh->flags & ~XUrgencyHint);
+	wmh->flags = urg ? (wmh->flags|XUrgencyHint) : (wmh->flags&~XUrgencyHint);
 	XSetWMHints(dpy, c->win, wmh);
 	XFree(wmh);
 }
@@ -1650,25 +1669,6 @@ unmapnotify(XEvent *e)
 			setclientstate(c, WithdrawnState);
 		else
 			unmanage(c, 0);
-	}
-}
-
-void
-updatebars(void)
-{
-	XSetWindowAttributes wa = {
-		.override_redirect = True,
-		.background_pixmap = ParentRelative,
-		.event_mask = ButtonPressMask|ExposureMask
-	};
-	XClassHint ch = {"dwm", "dwm"};
-	if (!barwin) {
-		barwin = XCreateWindow(dpy, root, mons->mx, by, mons->mw, bh, 0, DefaultDepth(dpy, screen),
-				CopyFromParent, DefaultVisual(dpy, screen),
-				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
-		XDefineCursor(dpy, barwin, cursor[CurNormal]->cursor);
-		XMapRaised(dpy, barwin);
-		XSetClassHint(dpy, barwin, &ch);
 	}
 }
 
