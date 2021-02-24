@@ -120,12 +120,12 @@ static Key keys[] = {
 	/*                        modifier / key, function / argument */
 	{                       MODKEY, XK_grave, spawn, {.v = dmenucmd } },
 	{             MODKEY|ShiftMask, XK_grave, spawn, {.v = termcmd } },
-	{                    ShiftMask, XK_grave, movemouse, {0} },
-	{                  ControlMask, XK_grave, resizemouse, {0} },
+	{                    ShiftMask, XK_grave, grabresize, {.i = DragMove } },
+	{                  ControlMask, XK_grave, grabresize, {.i = DragSize } },
 	{        ControlMask|ShiftMask, XK_grave, togglefloating, {0} },
 	{                      MODKEY, XK_Return, togglefullscreen, {0} },
 	{                          MODKEY, XK_F4, killclient, {0} },
-	{                MODKEY|ShiftMask, XK_F4, spawn, {.v = lockcmd} },
+	{                MODKEY|ShiftMask, XK_F4, spawn, {.v = lockcmd } },
 	{           ShiftMask|ControlMask, XK_F4, spawn, {.v = ssleep } },
 	{    MODKEY|ControlMask|ShiftMask, XK_F4, quit, {0} },
 

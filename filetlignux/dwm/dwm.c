@@ -57,8 +57,8 @@
 #define MOVEZONE(C, X, Y)   (abs(C->x - X) <= C->bw || abs(C->y - Y) <= C->bw)
 #define RESIZEZONE(C, X, Y)     (abs(C->x + WIDTH(C) - X) <= C->bw ||\
                                  abs(C->y + HEIGHT(C) - Y) <= C->bw)
-#define WINY(M)                 (M == mons && topbar ? M->my + bh : M->my)
-#define WINH(M)                 (M == mons ? M->mh - bh : M->mh)
+#define WINY(M)                 (&M == mons && topbar ? M.my + bh : M.my)
+#define WINH(M)                 (&M == mons ? M.mh - bh : M.mh)
 #define MONNULL(M)          (M.mx == 0 && M.my == 0 && M.mw == 0 && M.mh == 0)
 #define SETMON(M, R)            {M.mx = R.x; M.my = R.y;\
                                  M.mw = R.width; M.mh = R.height;}
@@ -79,6 +79,7 @@ enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast };
                                                            /* default atoms */
 enum { ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle,
        ClkClientWin, ClkRootWin, ClkLast }; /* clicks */
+enum { DragMove, DragSize };
 
 typedef union {
 	int i;
@@ -151,13 +152,13 @@ static long getstate(Window w);
 static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 static void grabbuttons(Client *c);
 static void grabkeys(void);
+static void grabresize(const Arg *arg);
 static void keypress(XEvent *e);
 static void keyrelease(XEvent *e);
 static void killclient(const Arg *arg);
 static void manage(Window w, XWindowAttributes *wa);
 static void mappingnotify(XEvent *e);
 static void maprequest(XEvent *e);
-static void movemouse(const Arg *arg);
 static void moveview(const Arg *arg);
 static Client *nexttiled(Client *c);
 static void pop(Client *);
@@ -166,7 +167,6 @@ static void quit(const Arg *arg);
 static void rawmotion(XEvent *e);
 static void resize(Client *c, int x, int y, int w, int h);
 static void resizeclient(Client *c, int x, int y, int w, int h);
-static void resizemouse(const Arg *arg);
 static void restack(void);
 static void run(void);
 static void scan(void);
@@ -214,7 +214,6 @@ static int lrpad;            /* sum of left and right padding for text */
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask = 0;
 static int stackgrabbed = 0;
-static int grabguard = 0;
 static int barfocus = 0;
 static Window *lastraised = NULL;
 unsigned int seltags;
@@ -557,8 +556,142 @@ drawbar(int zen)
 	drw_map(drw, barwin, 0, 0, mons->mw, bh);
 }
 
+/* there are some broken focus acquiring clients needing extra handling */
 void
-catchmouseresize(Client *c) {
+focusin(XEvent *e)
+{
+	XFocusChangeEvent *ev = &e->xfocus;
+
+	if (sel && ev->window != sel->win)
+		setfocus(sel);
+}
+
+void
+focusstack(const Arg *arg)
+{
+	Client *c = NULL, *i;
+
+	if (!sel)
+		return;
+	if (arg->i > 0) {
+		for (c = sel->next; c && !ISVISIBLE(c); c = c->next);
+		if (!c)
+			for (c = clients; c && !ISVISIBLE(c); c = c->next);
+	} else {
+		for (i = clients; i != sel; i = i->next)
+			if (ISVISIBLE(i))
+				c = i;
+		if (!c)
+			for (; i; i = i->next)
+				if (ISVISIBLE(i))
+					c = i;
+	}
+	if (c) {
+		focus(c);
+		restack();
+		grabbuttons(c);
+	}
+}
+
+void
+grabresize(const Arg *arg) {
+	static int grabguard = 0;
+	int x, y, i, m1, m2, type = arg->i;
+	char keydown = 'x';
+	char keystatemap[32];
+	Client *c;
+	Client oc, nc;
+	XEvent ev;
+	Time lasttime = 0;
+
+	if (grabguard)
+		return;
+	if (!(c = sel))
+		return;
+	if (c->isfullscreen) /* no support moving fullscreen windows by mouse */
+		return;
+	restack();
+	nc = oc = *c;
+	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
+		None, cursor[type == DragMove ? CurMove : CurResize]->cursor, CurrentTime)
+		!= GrabSuccess)
+		return;
+	XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
+	if (!getrootptr(&x, &y))
+		return;
+
+	grabguard = 1;
+	do {
+		XMaskEvent(dpy, MOUSEMASK|ExposureMask|SubstructureRedirectMask|
+			KeyPressMask|KeyReleaseMask, &ev);
+		switch(ev.type) {
+		case ConfigureRequest:
+		case Expose:
+		case MapRequest:
+			handler[ev.type](&ev);
+			break;
+		case KeyRelease:
+			XQueryKeymap(dpy, keystatemap);
+			keydown = keystatemap[0];
+			for (i = 1; i < 32; i++)
+				keydown |= keystatemap[i];
+			break;
+		case MotionNotify:
+			if ((ev.xmotion.time - lasttime) <= (1000 / 60))
+				continue;
+			lasttime = ev.xmotion.time;
+			/* release from tile mode if needed */
+			if (!c->isfloating
+			&& MAX(abs(ev.xmotion.x - x), abs(ev.xmotion.y - y)) > snap)
+				togglefloating(NULL);
+
+			/* calculate window movement */
+			if (type == DragMove) {
+				nc.x = oc.x + (ev.xmotion.x - x);
+				nc.y = oc.y + (ev.xmotion.y - y);
+				for (m1 = 0; m1 < LENGTH(mons)-1
+				&& !INMON(nc.x + snap, nc.y + snap, mons[m1]); m1++);
+				for (m2 = 0; m2 < LENGTH(mons)-1
+				&& !INMON(nc.x + nc.w - snap, nc.y + nc.h - snap, mons[m2]); m2++);
+				/* snap to edges */
+				if (abs(mons[m1].mx - nc.x) < snap)
+					nc.x = mons[m1].mx;
+				else if (abs((mons[m2].mx + mons[m2].mw) - (nc.x + WIDTH(c))) < snap)
+					nc.x = mons[m2].mx + mons[m2].mw - WIDTH(c);
+				if (abs(WINY(mons[m1]) - nc.y) < snap)
+					nc.y = WINY(mons[m1]);
+				else if (abs((WINY(mons[m2]) + WINH(mons[m2]))
+				             - (nc.y + HEIGHT(c))) < snap)
+					nc.y = WINY(mons[m2]) + WINH(mons[m2]) - HEIGHT(c);
+			}
+			else if (type == DragSize) {
+				nc.w = MAX(oc.w + (ev.xmotion.x - x), 1);
+				nc.h = MAX(oc.h + (ev.xmotion.y - y), 1);
+				for (m2 = 0; m2 < LENGTH(mons)-1
+				&& !INMON(nc.x + nc.w - snap, nc.y + nc.h - snap, mons[m2]); m2++);
+				/* snap to edges */
+				if (abs((mons[m2].mx + mons[m2].mw) - (c->x + nc.w + 2*c->bw)) < snap)
+					nc.w = mons[m2].mx + mons[m2].mw - c->x - 2*c->bw;
+				if (abs((WINY(mons[m2]) + WINH(mons[m2]))
+				        - (c->y + nc.h + 2*c->bw)) < snap)
+					nc.h = WINY(mons[m2]) + WINH(mons[m2]) - c->y - 2*c->bw;
+			}
+			if (c->isfloating)
+				resize(c, nc.x, nc.y, nc.w, nc.h);
+			break;
+		}
+	} while (ev.type != ButtonRelease && keydown);
+	XUngrabPointer(dpy, CurrentTime);
+	XUngrabKeyboard(dpy, CurrentTime);
+	grabguard = 0;
+
+	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
+	if (sel)
+		grabbuttons(sel);
+}
+
+void
+grabresizecheck(Client *c) {
 	int x, y, di, abort = 0;
 	unsigned int mask, dui;
 	Window dummy, cw;
@@ -596,9 +729,9 @@ catchmouseresize(Client *c) {
 		case ButtonPress:
 			if (ev.xbutton.button == Button1) {
 				if (MOVEZONE(c, x, y))
-					movemouse(&(Arg){0});
+					grabresize(&(Arg){.i = DragMove});
 				else if (RESIZEZONE(c, x, y))
-					resizemouse(&(Arg){0});
+					grabresize(&(Arg){.i = DragSize});
 			}
 		}
 	} while (ev.type != ButtonPress && ev.type != ButtonRelease && !abort
@@ -665,42 +798,7 @@ focus(Client *c)
 	drawbar(0);
 }
 
-/* there are some broken focus acquiring clients needing extra handling */
-void
-focusin(XEvent *e)
-{
-	XFocusChangeEvent *ev = &e->xfocus;
 
-	if (sel && ev->window != sel->win)
-		setfocus(sel);
-}
-
-void
-focusstack(const Arg *arg)
-{
-	Client *c = NULL, *i;
-
-	if (!sel)
-		return;
-	if (arg->i > 0) {
-		for (c = sel->next; c && !ISVISIBLE(c); c = c->next);
-		if (!c)
-			for (c = clients; c && !ISVISIBLE(c); c = c->next);
-	} else {
-		for (i = clients; i != sel; i = i->next)
-			if (ISVISIBLE(i))
-				c = i;
-		if (!c)
-			for (; i; i = i->next)
-				if (ISVISIBLE(i))
-					c = i;
-	}
-	if (c) {
-		focus(c);
-		restack();
-		grabbuttons(c);
-	}
-}
 
 void
 grabstack(const Arg *arg)
@@ -903,9 +1001,7 @@ manage(Window w, XWindowAttributes *wa)
 
 	/* find current monitor */
 	if (getrootptr(&x, &y)) {
-		for (m = 0; m < LENGTH(mons) && !INMON(x, y, mons[m]); m++);
-		if (m == LENGTH(mons))
-			m = 0;
+		for (m = LENGTH(mons)-1; m > 0 && !INMON(x, y, mons[m]); m--);
 	} else m = 0;
 	/* adjust to current monitor */
 	if (c->x + WIDTH(c) > mons[m].mx + mons[m].mw)
@@ -969,113 +1065,6 @@ maprequest(XEvent *e)
 		return;
 	if (!wintoclient(ev->window))
 		manage(ev->window, &wa);
-}
-
-void
-rawmotion(XEvent *e)
-{
-	int rx, ry, bf, di;
-	unsigned int dui;
-	Window cw, dummy;
-	Client *c;
-
-	if (!XQueryPointer(dpy, root, &dummy, &cw, &rx, &ry, &di, &di, &dui))
-		return;
-
-	/* top bar raise when mouse hits the screen edge.
-	   especially useful for apps that capture the kayboard. */
-	bf = topbar ? ry <= mons->my : ry >= mons->my + mons->mh - 1;
-	bf = bf && (rx >= mons->mx) && (rx <= mons->mx + mons->mw);
-	if (bf & barfocus) {
-		XRaiseWindow(dpy, barwin);
-		if (sel)
-			unfocus(sel, 1);
-	}
-	else if (!bf && barfocus && sel) {
-		XRaiseWindow(dpy, lastraised ? *lastraised : sel->win);
-		XSetWindowBorder(dpy, sel->win, scheme[SchemeSel][ColBorder].pixel);
-		setfocus(sel);
-	}
-	barfocus = bf;
-
-	/* watch for border edge locations for resizing */
-	if (cw && cw != root && (c = wintoclient(cw)))
-		catchmouseresize(c);
-}
-
-void
-movemouse(const Arg *arg)
-{
-	int x, y, ocx, ocy, nx, ny, i;
-	char keydown = 'x';
-	char keystatemap[32];
-	Client *c;
-	XEvent ev;
-	Time lasttime = 0;
-
-	if (grabguard)
-		return;
-	if (!(c = sel))
-		return;
-	if (c->isfullscreen) /* no support moving fullscreen windows by mouse */
-		return;
-	restack();
-	ocx = c->x;
-	ocy = c->y;
-	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
-		None, cursor[CurMove]->cursor, CurrentTime) != GrabSuccess)
-		return;
-	XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
-	if (!getrootptr(&x, &y))
-		return;
-
-	grabguard = 1;
-	do {
-		XMaskEvent(dpy,
-			MOUSEMASK|ExposureMask|SubstructureRedirectMask|KeyPressMask|KeyReleaseMask,
-			&ev);
-		switch(ev.type) {
-		case ConfigureRequest:
-		case Expose:
-		case MapRequest:
-			handler[ev.type](&ev);
-			break;
-		case KeyRelease:
-			XQueryKeymap(dpy, keystatemap);
-			keydown = keystatemap[0];
-			for (i = 1; i < 32; i++)
-				keydown |= keystatemap[i];
-			break;
-		case MotionNotify:
-			if ((ev.xmotion.time - lasttime) <= (1000 / 60))
-				continue;
-			lasttime = ev.xmotion.time;
-
-			nx = ocx + (ev.xmotion.x - x);
-			ny = ocy + (ev.xmotion.y - y);
-			if (abs(mons->mx - nx) < snap)
-				nx = mons->mx;
-			else if (abs((mons->mx + mons->mw) - (nx + WIDTH(c))) < snap)
-				nx = mons->mx + mons->mw - WIDTH(c);
-			if (abs(WINY(mons) - ny) < snap)
-				ny = WINY(mons);
-			else if (abs((WINY(mons) + WINH(mons)) - (ny + HEIGHT(c))) < snap)
-				ny = WINY(mons) + WINH(mons) - HEIGHT(c);
-			if (!c->isfloating
-			&& (abs(nx - c->x) > snap || abs(ny - c->y) > snap))
-				togglefloating(NULL);
-			if (c->isfloating)
-				resize(c, nx, ny, c->w, c->h);
-			break;
-		}
-	} while (ev.type != ButtonRelease && keydown);
-	XUngrabPointer(dpy, CurrentTime);
-	XUngrabKeyboard(dpy, CurrentTime);
-	grabguard = 0;
-
-	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
-	if (sel)
-		grabbuttons(sel);
 }
 
 Client *
@@ -1143,6 +1132,37 @@ quit(const Arg *arg)
 }
 
 void
+rawmotion(XEvent *e)
+{
+	int rx, ry, bf, di;
+	unsigned int dui;
+	Window cw, dummy;
+	Client *c;
+
+	if (!XQueryPointer(dpy, root, &dummy, &cw, &rx, &ry, &di, &di, &dui))
+		return;
+
+	/* top bar raise when mouse hits the screen edge.
+	   especially useful for apps that capture the kayboard. */
+	bf = topbar ? ry <= mons->my : ry >= mons->my + mons->mh - 1;
+	bf = bf && (rx >= mons->mx) && (rx <= mons->mx + mons->mw);
+	if (bf & barfocus) {
+		XRaiseWindow(dpy, barwin);
+		if (sel)
+			unfocus(sel, 1);
+	}
+	else if (!bf && barfocus && sel) {
+		XRaiseWindow(dpy, lastraised ? *lastraised : sel->win);
+		XSetWindowBorder(dpy, sel->win, scheme[SchemeSel][ColBorder].pixel);
+		setfocus(sel);
+	}
+	barfocus = bf;
+
+	/* watch for border edge locations for resizing */
+	if (cw && cw != root && (c = wintoclient(cw)))
+		grabresizecheck(c);
+}
+void
 resize(Client *c, int x, int y, int w, int h)
 {
 	if (applysizehints(c, &x, &y, &w, &h))
@@ -1168,82 +1188,6 @@ resizeclient(Client *c, int x, int y, int w, int h)
 	XConfigureWindow(dpy, c->win, CWX|CWY|CWWidth|CWHeight|CWBorderWidth, &wc);
 	configure(c);
 	XSync(dpy, False);
-}
-
-void
-resizemouse(const Arg *arg)
-{
-	int x, y, ocw, och, nw, nh, i;
-	char keydown = 'x';
-	char keystatemap[32];
-	Client *c;
-	XEvent ev;
-	Time lasttime = 0;
-
-	if (grabguard)
-		return;
-	if (!(c = sel))
-		return;
-	if (c->isfullscreen) /* no support resizing fullscreen windows by mouse */
-		return;
-	restack();
-	ocw = c->w;
-	och = c->h;
-	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
-		None, cursor[CurResize]->cursor, CurrentTime) != GrabSuccess)
-		return;
-	XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
-	if (!getrootptr(&x, &y))
-		return;
-
-	grabguard = 1;
-	do {
-		XMaskEvent(dpy,
-			MOUSEMASK|ExposureMask|SubstructureRedirectMask|KeyPressMask|KeyReleaseMask,
-			&ev);
-		switch(ev.type) {
-		case ConfigureRequest:
-		case Expose:
-		case MapRequest:
-			handler[ev.type](&ev);
-			break;
-		case KeyRelease:
-			XQueryKeymap(dpy, keystatemap);
-			keydown = keystatemap[0];
-			for (i = 1; i < 32; i++)
-				keydown |= keystatemap[i];
-			break;
-		case MotionNotify:
-			if ((ev.xmotion.time - lasttime) <= (1000 / 60))
-				continue;
-			lasttime = ev.xmotion.time;
-
-			nw = MAX(ocw + (ev.xmotion.x - x), 1);
-			nh = MAX(och + (ev.xmotion.y - y), 1);
-			if (abs((mons->mx + mons->mw) - (c->x + nw + 2*c->bw)) < snap)
-				nw = mons->mx + mons->mw - c->x - 2*c->bw;
-			if (abs((WINY(mons) + WINH(mons)) - (c->y + nh + 2*c->bw)) < snap)
-				nh = WINY(mons) + WINH(mons) - c->y - 2*c->bw;
-			if (mons->mx + nw >= mons->mx
-			&& mons->mx + nw <= mons->mx + mons->mw
-			&& WINY(mons) + nh >= WINY(mons)
-			&& WINY(mons) + nh <= WINY(mons) + WINH(mons)) {
-				if (!c->isfloating
-				&& (abs(nw - c->w) > snap || abs(nh - c->h) > snap))
-					togglefloating(NULL);
-			}
-			if (c->isfloating)
-				resize(c, c->x, c->y, nw, nh);
-			break;
-		}
-	} while (ev.type != ButtonRelease && keydown);
-	XUngrabPointer(dpy, CurrentTime);
-	XUngrabKeyboard(dpy, CurrentTime);
-	grabguard = 0;
-
-	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
-	if (sel)
-		grabbuttons(sel);
 }
 
 void
@@ -1377,9 +1321,7 @@ setfullscreen(Client *c, int fullscreen)
 		c->bw = 0;
 		c->isfloating = 1;
 		/* find the full screen spread across the monitors */
-		for (m1 = 0; m1 < LENGTH(mons) && !INMON(c->x, c->y, mons[m1]); m1++);
-		if (m1 == LENGTH(mons))
-			m1 = 0;
+		for (m1 = LENGTH(mons)-1; m1 > 0 && !INMON(c->x, c->y, mons[m1]); m1--);
 		for (m2 = 0; m2 < LENGTH(mons)
 		&& !INMON(c->x + c->w, c->y + c->h, mons[m2]); m2++);
 		if (m2 == LENGTH(mons))
@@ -1479,7 +1421,7 @@ setup(void)
 			XRRSelectInput(dpy, root, RROutputChangeNotifyMask);
 		}
 	}
-	by = topbar ? mons->my : mons->my + WINH(mons);
+	by = topbar ? mons->my : mons->my + WINH(mons[0]);
 	/* init bars */
 	updatebars();
 	updatestatus();
@@ -1576,24 +1518,23 @@ tile(void)
 {
 	unsigned int i, n, h, mw, my, ty;
 	Client *c;
-	Monitor *m = mons;
 
 	for (n = 0, c = nexttiled(clients); c; c = nexttiled(c->next), n++);
 	if (n == 0)
 		return;
 
-	mw = n > 1 ? m->mw * mfact : m->mw;
+	mw = n > 1 ? mons[0].mw * mfact : mons[0].mw;
 	for (i = my = ty = 0, c = nexttiled(clients); c; c = nexttiled(c->next), i++)
 		if (i < 1) {
-			h = (WINH(m) - my) / (MIN(n, 1) - i);
-			resize(c, m->mx, WINY(m) + my, mw - (2*c->bw), h - (2*c->bw));
-			if (my + HEIGHT(c) < WINH(m))
+			h = (WINH(mons[0]) - my) / (MIN(n, 1) - i);
+			resize(c, mons[0].mx, WINY(mons[0]) + my, mw - (2*c->bw), h - (2*c->bw));
+			if (my + HEIGHT(c) < WINH(mons[0]))
 				my += HEIGHT(c);
 		} else {
-			h = (WINH(m) - ty) / (n - i);
-			resize(c, m->mx + mw, WINY(m) + ty,
-				m->mw - mw - (2*c->bw), h - (2*c->bw));
-			if (ty + HEIGHT(c) < WINH(m))
+			h = (WINH(mons[0]) - ty) / (n - i);
+			resize(c, mons[0].mx + mw, WINY(mons[0]) + ty,
+				mons[0].mw - mw - (2*c->bw), h - (2*c->bw));
+			if (ty + HEIGHT(c) < WINH(mons[0]))
 				ty += HEIGHT(c);
 		}
 }
@@ -1704,7 +1645,7 @@ updatebars(void)
 		XDefineCursor(dpy, barwin, cursor[CurNormal]->cursor);
 		XMapRaised(dpy, barwin);
 		XSetClassHint(dpy, barwin, &ch);
-	} // TODO move to setup
+	}
 }
 
 void
@@ -1738,7 +1679,7 @@ updatemonitors(XEvent *e)
 	mons[0] = m;
 
 	/* update layout */
-	by = topbar ? mons->my : mons->my + WINH(mons);
+	by = topbar ? mons->my : mons->my + WINH(mons[0]);
 	if (barwin)
 		XMoveResizeWindow(dpy, barwin, mons->mx, by, mons->mw, bh);
 }
