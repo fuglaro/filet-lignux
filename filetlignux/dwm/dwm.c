@@ -1340,7 +1340,8 @@ setfullscreen(Client *c, int fullscreen)
 		for (m1 = LENGTH(mons)-1; m1 > 0 && !INMON(c->x, c->y, mons[m1]); m1--);
 		for (m2 = 0; m2 < LENGTH(mons)
 		&& !INMON(c->x + c->w, c->y + c->h, mons[m2]); m2++);
-		if (m2 == LENGTH(mons))
+		if (m2 == LENGTH(mons) || mons[m2].mx + mons[m2].mw <= mons[m1].mx
+		|| mons[m2].my + mons[m2].mh <= mons[m1].my)
 			m2 = m1;
 		/* apply fullscreen window parameters */
 		w = mons[m2].mx - mons[m1].mx + mons[m2].mw;
