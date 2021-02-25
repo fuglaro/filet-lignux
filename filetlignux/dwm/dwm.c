@@ -64,6 +64,7 @@
                                  Y >= M.my && Y < M.my + M.mh)
 #define WIDTH(X)                ((X)->w + 2 * (X)->bw)
 #define HEIGHT(X)               ((X)->h + 2 * (X)->bw)
+#define WINMON(C, M)           INMON(C->x + WIDTH(C)/2, C->y + HEIGHT(C)/2, M)
 #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
 #define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
 
@@ -1342,7 +1343,8 @@ setfullscreen(Client *c, int fullscreen)
 		c->isfloating = 1;
 		/* find the full screen spread across the monitors */
 		for (m1 = MONLEN-1; m1 > 0 && !INMON(c->x, c->y, mons[m1]); m1--);
-		for (m2 = 0; m2 < MONLEN && !INMON(c->x+c->w, c->y+c->h, mons[m2]); m2++);
+		for (m2 = 0; m2 < MONLEN
+		&& !INMON(c->x + WIDTH(c), c->y + HEIGHT(c), mons[m2]); m2++);
 		if (m2 == MONLEN || mons[m2].mx + mons[m2].mw <= mons[m1].mx
 		|| mons[m2].my + mons[m2].mh <= mons[m1].my)
 			m2 = m1;
@@ -1554,21 +1556,14 @@ tile(void)
 
 	/* find the number of clients in each monitor */
 	for (c = nexttiled(clients); c; c = nexttiled(c->next)) {
-		for (m = 0; m < LENGTH(mons) && !INMON(c->x, c->y, mons[m]); m++);
-		if (m == LENGTH(mons))
-			for (m = LENGTH(mons)-1; m > 0
-			&& !INMON(c->x + WIDTH(c), c->y + HEIGHT(c), mons[m]); m--);
+		for (m = LENGTH(mons)-1; m > 0 && !WINMON(c, mons[m]); m--);
 		nm[m]++;
 	}
 
 	/* tile windows into the relevant monitors. */
 	for (c = nexttiled(clients); c; c = nexttiled(c->next), i[m]++) {
 		/* find the monitor placement again */
-		for (m = 0; m < LENGTH(mons) && !INMON(c->x, c->y, mons[m]); m++);
-		if (m == LENGTH(mons))
-			for (m = LENGTH(mons)-1; m > 0
-			&& !INMON(c->x + WIDTH(c), c->y + HEIGHT(c), mons[m]); m--);
-
+		for (m = LENGTH(mons)-1; m > 0 && !WINMON(c, mons[m]); m--);
 		/* tile the client within the relevant monitor */
 		mw = nm[m] > nmain ? mons[m].mw * mfact : mons[m].mw;
 		if (i[m] < nmain) {
