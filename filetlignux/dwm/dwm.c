@@ -56,6 +56,7 @@
                                  abs(C->y + HEIGHT(C) - Y) <= C->bw)
 #define WINY(M)                 (&M == mons && topbar ? M.my + bh : M.my)
 #define WINH(M)                 (&M == mons ? M.mh - bh : M.mh)
+#define MONLEN                  (sizeof mons / sizeof mons[0])
 #define MONNULL(M)          (M.mx == 0 && M.my == 0 && M.mw == 0 && M.mh == 0)
 #define SETMON(M, R)            {M.mx = R.x; M.my = R.y;\
                                  M.mw = R.width; M.mh = R.height;}
@@ -832,9 +833,9 @@ grabresize(const Arg *arg) {
 			if (type == DragMove) {
 				nc.x = oc.x + (ev.xmotion.x - x);
 				nc.y = oc.y + (ev.xmotion.y - y);
-				for (m1 = 0; m1 < LENGTH(mons)-1
+				for (m1 = 0; m1 < MONLEN-1
 				&& !INMON(nc.x + snap, nc.y + snap, mons[m1]); m1++);
-				for (m2 = 0; m2 < LENGTH(mons)-1
+				for (m2 = 0; m2 < MONLEN-1
 				&& !INMON(nc.x + nc.w - snap, nc.y + nc.h - snap, mons[m2]); m2++);
 				/* snap to edges */
 				if (abs(mons[m1].mx - nc.x) < snap)
@@ -850,7 +851,7 @@ grabresize(const Arg *arg) {
 			else if (type == DragSize) {
 				nc.w = MAX(oc.w + (ev.xmotion.x - x), 1);
 				nc.h = MAX(oc.h + (ev.xmotion.y - y), 1);
-				for (m2 = 0; m2 < LENGTH(mons)-1
+				for (m2 = 0; m2 < MONLEN-1
 				&& !INMON(nc.x + nc.w - snap, nc.y + nc.h - snap, mons[m2]); m2++);
 				/* snap to edges */
 				if (abs((mons[m2].mx + mons[m2].mw) - (c->x + nc.w + 2*c->bw)) < snap)
@@ -1011,7 +1012,7 @@ manage(Window w, XWindowAttributes *wa)
 
 	/* find current monitor */
 	if (getrootptr(&x, &y)) {
-		for (m = LENGTH(mons)-1; m > 0 && !INMON(x, y, mons[m]); m--);
+		for (m = MONLEN-1; m > 0 && !INMON(x, y, mons[m]); m--);
 	} else m = 0;
 	/* adjust to current monitor */
 	if (c->x + WIDTH(c) > mons[m].mx + mons[m].mw)
@@ -1340,10 +1341,9 @@ setfullscreen(Client *c, int fullscreen)
 		c->bw = 0;
 		c->isfloating = 1;
 		/* find the full screen spread across the monitors */
-		for (m1 = LENGTH(mons)-1; m1 > 0 && !INMON(c->x, c->y, mons[m1]); m1--);
-		for (m2 = 0; m2 < LENGTH(mons)
-		&& !INMON(c->x + c->w, c->y + c->h, mons[m2]); m2++);
-		if (m2 == LENGTH(mons) || mons[m2].mx + mons[m2].mw <= mons[m1].mx
+		for (m1 = MONLEN-1; m1 > 0 && !INMON(c->x, c->y, mons[m1]); m1--);
+		for (m2 = 0; m2 < MONLEN && !INMON(c->x+c->w, c->y+c->h, mons[m2]); m2++);
+		if (m2 == MONLEN || mons[m2].mx + mons[m2].mw <= mons[m1].mx
 		|| mons[m2].my + mons[m2].mh <= mons[m1].my)
 			m2 = m1;
 		/* apply fullscreen window parameters */
@@ -1548,27 +1548,42 @@ tag(const Arg *arg)
 void
 tile(void)
 {
-	unsigned int i, n, h, mw, my, ty;
+	unsigned int m, h, mw;
+	int nm[MONLEN] = {0}, i[MONLEN] = {0}, my[MONLEN] = {0}, ty[MONLEN] = {0};
 	Client *c;
 
-	for (n = 0, c = nexttiled(clients); c; c = nexttiled(c->next), n++);
-	if (n == 0)
-		return;
+	/* find the number of clients in each monitor */
+	for (c = nexttiled(clients); c; c = nexttiled(c->next)) {
+		for (m = 0; m < LENGTH(mons) && !INMON(c->x, c->y, mons[m]); m++);
+		if (m == LENGTH(mons))
+			for (m = LENGTH(mons)-1; m > 0
+			&& !INMON(c->x + WIDTH(c), c->y + HEIGHT(c), mons[m]); m--);
+		nm[m]++;
+	}
 
-	mw = n > 1 ? mons[0].mw * mfact : mons[0].mw;
-	for (i = my = ty = 0, c = nexttiled(clients); c; c = nexttiled(c->next), i++)
-		if (i < 1) {
-			h = (WINH(mons[0]) - my) / (MIN(n, 1) - i);
-			resize(c, mons[0].mx, WINY(mons[0]) + my, mw - (2*c->bw), h - (2*c->bw));
-			if (my + HEIGHT(c) < WINH(mons[0]))
-				my += HEIGHT(c);
+	/* tile windows into the relevant monitors. */
+	for (c = nexttiled(clients); c; c = nexttiled(c->next), i[m]++) {
+		/* find the monitor placement again */
+		for (m = 0; m < LENGTH(mons) && !INMON(c->x, c->y, mons[m]); m++);
+		if (m == LENGTH(mons))
+			for (m = LENGTH(mons)-1; m > 0
+			&& !INMON(c->x + WIDTH(c), c->y + HEIGHT(c), mons[m]); m--);
+
+		/* tile the client within the relevant monitor */
+		mw = nm[m] > nmain ? mons[m].mw * mfact : mons[m].mw;
+		if (i[m] < nmain) {
+			h = (WINH(mons[m]) - my[m]) / (MIN(nm[m], nmain) - i[m]);
+			resize(c, mons[m].mx, WINY(mons[m]) + my[m], mw - (2*c->bw), h - (2*c->bw));
+			if (my[m] + HEIGHT(c) < WINH(mons[m]))
+				my[m] += HEIGHT(c);
 		} else {
-			h = (WINH(mons[0]) - ty) / (n - i);
-			resize(c, mons[0].mx + mw, WINY(mons[0]) + ty,
-				mons[0].mw - mw - (2*c->bw), h - (2*c->bw));
-			if (ty + HEIGHT(c) < WINH(mons[0]))
-				ty += HEIGHT(c);
+			h = (WINH(mons[m]) - ty[m]) / (nm[m] - i[m]);
+			resize(c, mons[m].mx + mw, WINY(mons[m]) + ty[m],
+				mons[m].mw - mw - (2*c->bw), h - (2*c->bw));
+			if (ty[m] + HEIGHT(c) < WINH(mons[m]))
+				ty[m] += HEIGHT(c);
 		}
+	}
 }
 
 void
@@ -1687,7 +1702,7 @@ updatemonitors(XEvent *e)
 	XRRMonitorInfo *inf;
 
 	inf = XRRGetMonitors(dpy, root, 1, &n);
-	for (i = 0; i < n && i < LENGTH(mons); i++) {
+	for (i = 0; i < n && i < MONLEN; i++) {
 		SETMON(mons[i], inf[i])
 		if (inf[i].primary)
 			pri = i;
