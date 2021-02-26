@@ -78,7 +78,7 @@ enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast };
                                                            /* default atoms */
 enum { ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle,
        ClkClientWin, ClkRootWin, ClkLast }; /* clicks */
-enum { DragMove, DragSize };
+enum { DragMove, DragSize, DragTile};
 
 typedef union {
 	int i;
@@ -826,7 +826,7 @@ grabresize(const Arg *arg) {
 				continue;
 			lasttime = ev.xmotion.time;
 			/* release from tile mode if needed */
-			if (!c->isfloating
+			if (type != DragTile && !c->isfloating
 			&& MAX(abs(ev.xmotion.x - x), abs(ev.xmotion.y - y)) > snap)
 				togglefloating(NULL);
 
@@ -849,7 +849,7 @@ grabresize(const Arg *arg) {
 				             - (nc.y + HEIGHT(c))) < snap)
 					nc.y = WINY(mons[m2]) + WINH(mons[m2]) - HEIGHT(c);
 			}
-			else if (type == DragSize) {
+			else if (type == DragSize || type == DragTile) {
 				nc.w = MAX(oc.w + (ev.xmotion.x - x), 1);
 				nc.h = MAX(oc.h + (ev.xmotion.y - y), 1);
 				for (m2 = 0; m2 < MONLEN-1
@@ -861,7 +861,7 @@ grabresize(const Arg *arg) {
 				        - (c->y + nc.h + 2*c->bw)) < snap)
 					nc.h = WINY(mons[m2]) + WINH(mons[m2]) - c->y - 2*c->bw;
 			}
-			if (c->isfloating)
+			if (c->isfloating || type == DragTile)
 				resize(c, nc.x, nc.y, nc.w, nc.h);
 			break;
 		}
@@ -870,6 +870,14 @@ grabresize(const Arg *arg) {
 	XUngrabKeyboard(dpy, CurrentTime);
 	grabguard = 0;
 
+	/* update the monitor layout to match any tiling changes */
+	if (type == DragTile) {
+		for (m1 = 0; m1 < MONLEN-1 && !INMON(c->x, c->y, mons[m1]); m1++);
+		mfact[m1] = MIN(0.95, MAX(0.5, (float)WIDTH(c) / mons[m1].mw));
+		nmain[m1] = MAX(1, mons[m1].mh / HEIGHT(c));
+		tile();
+	}
+
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
 	if (sel)
 		grabbuttons(sel);
@@ -877,7 +885,7 @@ grabresize(const Arg *arg) {
 
 void
 grabresizecheck(Client *c) {
-	int x, y, di;
+	int m, x, y, di;
 	unsigned int mask, dui;
 	Window dummy, cw;
 	XEvent ev;
@@ -895,9 +903,8 @@ grabresizecheck(Client *c) {
 		return;
 
 	do {
-		XMaskEvent(dpy,
-			MOUSEMASK|ExposureMask|SubstructureRedirectMask|KeyPressMask|KeyReleaseMask,
-			&ev);
+		XMaskEvent(dpy, MOUSEMASK|ExposureMask|SubstructureRedirectMask|
+			KeyPressMask|KeyReleaseMask, &ev);
 		switch(ev.type) {
 		case KeyPress:
 			XUngrabPointer(dpy, CurrentTime);
@@ -914,8 +921,14 @@ grabresizecheck(Client *c) {
 			if (ev.xbutton.button == Button1) {
 				if (MOVEZONE(c, x, y))
 					grabresize(&(Arg){.i = DragMove});
-				else if (RESIZEZONE(c, x, y))
-					grabresize(&(Arg){.i = DragSize});
+				else if (RESIZEZONE(c, x, y)) {
+					for (m = 0; m < MONLEN && !INMON(x, y, mons[m]); m++);
+					if (!c->isfloating && m < MONLEN
+					&& x - c->bw <= mons[m].mx + mfact[m]* mons[m].mw)
+						grabresize(&(Arg){.i = DragTile});
+					else
+						grabresize(&(Arg){.i = DragSize});
+				}
 			}
 		}
 	} while (ev.type != ButtonPress && ev.type != ButtonRelease
@@ -1565,10 +1578,10 @@ tile(void)
 		/* find the monitor placement again */
 		for (m = LENGTH(mons)-1; m > 0 && !WINMON(c, mons[m]); m--);
 		/* tile the client within the relevant monitor */
-		mw = nm[m] > nmain ? mons[m].mw * mfact : mons[m].mw;
-		if (i[m] < nmain) {
-			h = (WINH(mons[m]) - my[m]) / (MIN(nm[m], nmain) - i[m]);
-			resize(c, mons[m].mx, WINY(mons[m]) + my[m], mw - (2*c->bw), h - (2*c->bw));
+		mw = nm[m] > nmain[m] ? mons[m].mw * mfact[m] : mons[m].mw;
+		if (i[m] < nmain[m]) {
+			h = (WINH(mons[m]) - my[m]) / (MIN(nm[m], nmain[m]) - i[m]);
+			resize(c, mons[m].mx, WINY(mons[m]) + my[m], mw-(2*c->bw), h-(2*c->bw));
 			if (my[m] + HEIGHT(c) < WINH(mons[m]))
 				my[m] += HEIGHT(c);
 		} else {
