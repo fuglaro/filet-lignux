@@ -58,10 +58,10 @@
 #define WINH(M)                 (&M == mons ? M.mh - bh : M.mh)
 #define MONLEN                  (sizeof mons / sizeof mons[0])
 #define MONNULL(M)          (M.mx == 0 && M.my == 0 && M.mw == 0 && M.mh == 0)
+#define INMON(X,  M)          (X >= M.mx && X < M.mx + M.mw &&\
+                                 Y >= M.my && Y < M.my + M.mh)
 #define SETMON(M, R)            {M.mx = R.x; M.my = R.y;\
                                  M.mw = R.width; M.mh = R.height;}
-#define INMON(X, Y, M)          (X >= M.mx && X < M.mx + M.mw &&\
-                                 Y >= M.my && Y < M.my + M.mh)
 #define WIDTH(X)                ((X)->w + 2 * (X)->bw)
 #define HEIGHT(X)               ((X)->h + 2 * (X)->bw)
 #define WINMON(C, M)           INMON(C->x + WIDTH(C)/2, C->y + HEIGHT(C)/2, M)
@@ -388,10 +388,9 @@ checkotherwm(void)
 void
 cleanup(void)
 {
-	Arg a = {.ui = ~0};
 	size_t i;
 
-	view(&a);
+	view(&(Arg){.ui = ~0});
 	while (clients)
 		unmanage(clients, 0);
 	XUngrabKey(dpy, AnyKey, AnyModifier, root);
@@ -1393,6 +1392,15 @@ setup(void)
 		die("no fonts could be loaded.");
 	lrpad = drw->fonts->h;
 	tagset[0] = tagset[1] = 1;
+	/* init monitor layout */
+	if (MONNULL(mons[0])) {
+		updatemonitors(NULL);
+		/* select xrandr events (if monitor layout isn't hard configured) */
+		if (XRRQueryExtension(dpy, &xre, &di)) {
+			handler[xre + RRNotify_OutputChange] = updatemonitors,
+			XRRSelectInput(dpy, root, RROutputChangeNotifyMask);
+		}
+	}
 	/* init atoms */
 	utf8string = XInternAtom(dpy, "UTF8_STRING", False);
 	wmatom[WMProtocols] = XInternAtom(dpy, "WM_PROTOCOLS", False);
@@ -1430,18 +1438,9 @@ setup(void)
 	XChangeProperty(dpy, root, netatom[NetSupported], XA_ATOM, 32,
 		PropModeReplace, (unsigned char *) netatom, NetLast);
 	XDeleteProperty(dpy, root, netatom[NetClientList]);
-	/* init monitor layout */
-	bh = drw->fonts->h + 2;
-	if (MONNULL(mons[0])) {
-		updatemonitors(NULL);
-		/* select xrandr events (if monitor layout isn't hard configured) */
-		if (XRRQueryExtension(dpy, &xre, &di)) {
-			handler[xre + RRNotify_OutputChange] = updatemonitors,
-			XRRSelectInput(dpy, root, RROutputChangeNotifyMask);
-		}
-	}
-	by = topbar ? mons->my : mons->my + WINH(mons[0]);
 	/* init bars */ {
+	bh = drw->fonts->h + 2;
+	by = topbar ? mons->my : mons->my + WINH(mons[0]);
 		barwin = XCreateWindow(dpy, root, mons->mx, by, mons->mw, bh, 0,
 			DefaultDepth(dpy, screen), CopyFromParent, DefaultVisual(dpy, screen),
 			CWOverrideRedirect|CWBackPixmap|CWEventMask, &(XSetWindowAttributes){
@@ -1707,11 +1706,6 @@ updatemonitors(XEvent *e)
 	m = mons[pri];
 	mons[pri] = mons[0];
 	mons[0] = m;
-
-	/* update layout */
-	by = topbar ? mons->my : mons->my + WINH(mons[0]);
-	if (barwin)
-		XMoveResizeWindow(dpy, barwin, mons->mx, by, mons->mw, bh);
 }
 
 void
