@@ -50,22 +50,27 @@ static const char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
  * otherwise set the position and size ({x,y,w,h}).
  * The first monitor will be the primary monitor and have the bar.
  * e.g:
-static Monitor mons[3] = {
+static Monitor mons[] = {
 	{2420, 0, 1020, 1080},
 	{1920, 0, 500, 1080},
 	{3440, 0, 400,  1080}
 };
 */
 static Monitor mons[] = {{0}, {0}, {0}};
-static const float mfact     = 0.55; /* factor of master area size [0.05..0.95] */
-static const int nmaster     = 1;    /* number of clients in master area */
-static const int resizehints = 1;    /* 1 means respect size hints in tiled resizals */
+/* factor of main area size [0.05..0.95] (for each monitor) */
+static float mfact[] = {0.55, 0.55, 0.55};
+/* number of clients in main area (for each monitor*/
+static int nmain[] = {1, 1, 1};
+static const int resizehints = 1;
+                           /* 1 means respect size hints in tiled resizals */
 
 /* launcher symbol */
 static const char lsymbol[] = ">";
 
 /* commands */
-static const char *dmenucmd[] = { "dmenu_run", "-p", ">", "-m", "0", "-i", "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
+static const char *dmenucmd[] = { "dmenu_run", "-p", ">", "-m", "0", "-i",
+	"-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan,
+	"-sf", col_gray4, NULL };
 static const char *termcmd[] = { "st", NULL };
 static const char *lockcmd[] = { "slock", NULL };
 static const char *upvol[]   = { "volumeup", NULL };
