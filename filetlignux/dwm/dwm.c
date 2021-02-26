@@ -144,7 +144,6 @@ static void focusin(XEvent *e);
 static void focusstack(const Arg *arg);
 static void focusview(const Arg *arg);
 static Atom getatomprop(Client *c, Atom prop);
-static int getrootptr(int *x, int *y);
 static long getstate(Window w);
 static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 static void grabbuttons(Client *c);
@@ -244,6 +243,11 @@ static Client *clients;
 static Client *sel;
 static Client *raised;
 static Window root, wmcheckwin;
+/* dummy variables */
+static int di;
+unsigned long dl;
+static unsigned int dui;
+static Window dwin;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -310,15 +314,13 @@ applysizehints(Client *c, int *x, int *y, int *w, int *h)
 void
 arrange(void)
 {
-	int di;
-	unsigned int dui;
-	Window dummy, cw;
+	Window cw;
 	Client *c;
 
 	showhide(clients);
 	tile();
 	restack();
-	XQueryPointer(dpy, root, &dummy, &cw, &di, &di, &di, &di, &dui);
+	XQueryPointer(dpy, root, &dwin, &cw, &di, &di, &di, &di, &dui);
 	if (cw && (c = wintoclient(cw)))
 		grabbuttons(c);
 	else if (sel)
@@ -662,8 +664,6 @@ focusview(const Arg *arg)
 Atom
 getatomprop(Client *c, Atom prop)
 {
-	int di;
-	unsigned long dl;
 	unsigned char *p = NULL;
 	Atom da, atom = None;
 
@@ -673,16 +673,6 @@ getatomprop(Client *c, Atom prop)
 		XFree(p);
 	}
 	return atom;
-}
-
-int
-getrootptr(int *x, int *y)
-{
-	int di;
-	unsigned int dui;
-	Window dummy;
-
-	return XQueryPointer(dpy, root, &dummy, &dummy, x, y, &di, &di, &dui);
 }
 
 long
@@ -735,16 +725,15 @@ grabbuttons(Client *c)
 {
 	updatenumlockmask();
 	{
-		int di;
-		unsigned int i, j, dui;
+		unsigned int i, j;
 		unsigned int modifiers[] = {
 			0, LockMask, numlockmask, numlockmask|LockMask };
-		Window cw, dummy;
+		Window cw, dwin;
 		Client *cwc = NULL;
 
 		XUngrabButton(dpy, AnyButton, AnyModifier, c->win);
 
-		XQueryPointer(dpy, root, &dummy, &cw, &di, &di, &di, &di, &dui);
+		XQueryPointer(dpy, root, &dwin, &cw, &di, &di, &di, &di, &dui);
 		if (cw && (cwc = wintoclient(cw)))
 			if ((cwc != raised) || (cwc->isfloating && cwc != clients))
 				XGrabButton(dpy, AnyButton, AnyModifier, cwc->win, False,
@@ -795,7 +784,7 @@ grabresize(const Arg *arg) {
 	   no support moving fullscreen windows by mouse */
 	if (grabguard || !(c = sel) || c->isfullscreen)
 		return;
-	if (!getrootptr(&x, &y))
+	if (!XQueryPointer(dpy, root, &dwin, &dwin, &x, &y, &di, &di, &dui))
 		return;
 	restack();
 	nc = oc = *c;
@@ -885,14 +874,14 @@ grabresize(const Arg *arg) {
 
 void
 grabresizecheck(Client *c) {
-	int m, x, y, di;
-	unsigned int mask, dui;
-	Window dummy, cw;
+	int m, x, y;
+	unsigned int mask;
+	Window cw;
 	XEvent ev;
 
 	if (!(c = sel) || c->isfullscreen)
 		return;
-	if (!XQueryPointer(dpy, root, &dummy, &dummy, &x, &y, &di, &di, &mask))
+	if (!XQueryPointer(dpy, root, &dwin, &dwin, &x, &y, &di, &di, &mask))
 		return;
 	if (mask & (Button1Mask|Button2Mask|Button3Mask|Button4Mask|Button5Mask))
 		return;
@@ -936,7 +925,7 @@ grabresizecheck(Client *c) {
 	XUngrabPointer(dpy, CurrentTime);
 
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
-	if (!XQueryPointer(dpy, root, &dummy, &cw, &di, &di, &di, &di, &dui))
+	if (!XQueryPointer(dpy, root, &dwin, &cw, &di, &di, &di, &di, &dui))
 		return;
 	if (cw && (c = wintoclient(cw)))
 		focus(c);
@@ -1025,7 +1014,7 @@ manage(Window w, XWindowAttributes *wa)
 	}
 
 	/* find current monitor */
-	if (getrootptr(&x, &y)) {
+	if (XQueryPointer(dpy, root, &dwin, &dwin, &x, &y, &di, &di, &dui)) {
 		for (m = MONLEN-1; m > 0 && !INMON(x, y, mons[m]); m--);
 	} else m = 0;
 	/* adjust to current monitor */
@@ -1168,12 +1157,11 @@ quit(const Arg *arg)
 void
 rawmotion(XEvent *e)
 {
-	int rx, ry, bf, di;
-	unsigned int dui;
-	Window cw, dummy;
+	int rx, ry, bf;
+	Window cw;
 	Client *c;
 
-	if (!XQueryPointer(dpy, root, &dummy, &cw, &rx, &ry, &di, &di, &dui))
+	if (!XQueryPointer(dpy, root, &dwin, &cw, &rx, &ry, &di, &di, &dui))
 		return;
 
 	/* top bar raise when mouse hits the screen edge.
@@ -1386,7 +1374,7 @@ setfullscreen(Client *c, int fullscreen)
 void
 setup(void)
 {
-	int i, di, xre;
+	int i, xre;
 	unsigned char xi[XIMaskLen(XI_RawMotion)] = { 0 };
 	XIEventMask evm;
 	XSetWindowAttributes wa;
