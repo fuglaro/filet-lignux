@@ -51,6 +51,7 @@
 #define ISVISIBLE(C)            ((C->tags & tagset[seltags]))
 #define LENGTH(X)               (sizeof X / sizeof X[0])
 #define MOUSEMASK               (BUTTONMASK|PointerMotionMask)
+#define MOUSEINF(W,X,Y,M) (XQueryPointer(dpy,root,&dwin,&W,&X,&Y,&di,&di,&M))
 #define MOVEZONE(C, X, Y)   (abs(C->x - X) <= C->bw || abs(C->y - Y) <= C->bw)
 #define RESIZEZONE(C, X, Y)     (abs(C->x + WIDTH(C) - X) <= C->bw ||\
                                  abs(C->y + HEIGHT(C) - Y) <= C->bw)
@@ -58,7 +59,7 @@
 #define WINH(M)                 (&M == mons ? M.mh - bh : M.mh)
 #define MONLEN                  (sizeof mons / sizeof mons[0])
 #define MONNULL(M)          (M.mx == 0 && M.my == 0 && M.mw == 0 && M.mh == 0)
-#define INMON(X,  M)          (X >= M.mx && X < M.mx + M.mw &&\
+#define INMON(X, Y, M)          (X >= M.mx && X < M.mx + M.mw &&\
                                  Y >= M.my && Y < M.my + M.mh)
 #define SETMON(M, R)            {M.mx = R.x; M.my = R.y;\
                                  M.mw = R.width; M.mh = R.height;}
@@ -76,8 +77,7 @@ enum { NetSupported, NetWMName, NetWMState, NetWMCheck,
        NetWMWindowTypeDialog, NetClientList, NetLast }; /* EWMH atoms */
 enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast };
                                                            /* default atoms */
-enum { ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle,
-       ClkClientWin, ClkRootWin, ClkLast }; /* clicks */
+enum { ClkLauncher, ClkWinTitle, ClkStatus, ClkTagBar, ClkLast };
 enum { DragMove, DragSize, DragTile};
 
 typedef union {
@@ -89,7 +89,6 @@ typedef union {
 
 typedef struct {
 	unsigned int click;
-	unsigned int mask;
 	unsigned int button;
 	void (*func)(const Arg *arg);
 	const Arg arg;
@@ -146,9 +145,9 @@ static void focusview(const Arg *arg);
 static Atom getatomprop(Client *c, Atom prop);
 static long getstate(Window w);
 static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
-static void grabbuttons(Client *c);
 static void grabkeys(void);
 static void grabresize(const Arg *arg);
+static void grabresizecheck(Client *c);
 static void grabstack(const Arg *arg);
 static void keypress(XEvent *e);
 static void keyrelease(XEvent *e);
@@ -188,7 +187,6 @@ static void unmanage(Client *c, int destroyed);
 static void unmapnotify(XEvent *e);
 static void updateclientlist(void);
 static void updatemonitors(XEvent *e);
-static void updatenumlockmask(void);
 static void updatesizehints(Client *c);
 static void updatestatus(void);
 static void updatetitle(Client *c);
@@ -207,12 +205,11 @@ static char stext[256];
 static int screen;
 static int sw, sh;           /* X display screen geometry width, height */
 static Window barwin;
-static int bh, blw, by, vw = 0;  /* bar geometry */
+static int bh, blw, by, vw;  /* bar geometry */
 static int lrpad;            /* sum of left and right padding for text */
 static int (*xerrorxlib)(Display *, XErrorEvent *);
-static unsigned int numlockmask = 0;
-static int stackgrabbed = 0;
-static int barfocus = 0;
+static unsigned int numlockmask;
+static int barfocus;
 static Window *lastraised = NULL;
 static unsigned int seltags;
 static unsigned int tagset[2];
@@ -234,7 +231,7 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 	[XI_RawMotion] = rawmotion,
 };
 static Atom wmatom[WMLast], netatom[NetLast];
-static int running = 1;
+static int end;
 static Cur *cursor[CurLast];
 static Clr **scheme;
 static Display *dpy;
@@ -314,17 +311,9 @@ applysizehints(Client *c, int *x, int *y, int *w, int *h)
 void
 arrange(void)
 {
-	Window cw;
-	Client *c;
-
 	showhide(clients);
 	tile();
 	restack();
-	XQueryPointer(dpy, root, &dwin, &cw, &di, &di, &di, &di, &dui);
-	if (cw && (c = wintoclient(cw)))
-		grabbuttons(c);
-	else if (sel)
-		grabbuttons(sel);
 }
 
 void
@@ -337,41 +326,30 @@ attach(Client *c)
 void
 buttonpress(XEvent *e)
 {
-	unsigned int i, x, click;
-	Arg arg = {0};
+	unsigned int i = 0, x = vw, click = ClkWinTitle;
 	Client *c;
+	Arg arg = {0};
 	XButtonPressedEvent *ev = &e->xbutton;
 
-	click = ClkRootWin;
 	if (ev->window == barwin) {
-		i = 0;
-		x = vw;
-		do
-			x += TEXTW(tags[i]);
-			while (ev->x >= vw && ev->x >= x && ++i < LENGTH(tags));
-			if (ev->x >= vw && i < LENGTH(tags)) {
+		for (;ev->x >= vw && ev->x >= (x+=TEXTW(tags[i])) && ++i < LENGTH(tags););
+		if (ev->x >= vw && i < LENGTH(tags)) {
 			click = ClkTagBar;
 			arg.ui = 1 << i;
-		} else if (ev->x < blw)
-			click = ClkLtSymbol;
-		else if (ev->x > vw - (int)TEXTW(stext))
-			click = ClkStatusText;
-		else
-			click = ClkWinTitle;
+		} else if (ev->x > vw - (int)TEXTW(stext))
+			click = ClkStatus;
+		else if (ev->x < blw)
+			click = ClkLauncher;
+		for (i = 0; i < LENGTH(buttons); i++)
+			if (click == buttons[i].click && buttons[i].button == ev->button)
+				buttons[i].func(arg.ui ? &arg : &buttons[i].arg);
 	} else if ((c = wintoclient(ev->window))) {
 		XAllowEvents(dpy, ReplayPointer, CurrentTime);
 		if (c->isfloating) pop(c);
+		XRaiseWindow(dpy, c->win);
 		raised = c;
-		focus(c);
-		restack();
-		click = ClkClientWin;
+		XUngrabButton(dpy, AnyButton, AnyModifier, c->win);
 	}
-	for (i = 0; i < LENGTH(buttons); i++)
-		if (click == buttons[i].click && buttons[i].func
-		&& buttons[i].button == ev->button
-		&& CLEANMASK(buttons[i].mask) == CLEANMASK(ev->state))
-			buttons[i].func(click == ClkTagBar && buttons[i].arg.i == 0
-				? &arg : &buttons[i].arg);
 }
 
 void
@@ -565,13 +543,15 @@ void
 enternotify(XEvent *e)
 {
 	Client *c;
-	XCrossingEvent *ev = &e->xcrossing;
 
-	if ((ev->mode != NotifyNormal || ev->detail == NotifyInferior)
-	&& ev->window != root)
+	if (e->xcrossing.detail == NotifyInferior)
 		return;
-	if ((c = wintoclient(ev->window)) != sel)
+	if ((c = wintoclient(e->xcrossing.window)) != sel)
 		focus(c);
+	/* Catch the Click-to-Raise that could be coming */
+	if (c && c != raised)
+		XGrabButton(dpy, AnyButton, AnyModifier, c->win, False,
+			BUTTONMASK, GrabModeSync, GrabModeSync, None, None);
 }
 
 void
@@ -598,12 +578,15 @@ focus(Client *c)
 			for (c = sel; c && !ISVISIBLE(c); c = c->next);
 		for (c = clients; c && !ISVISIBLE(c); c = c->next);
 	}
-	if (sel && sel != c)
+	if (sel && sel != c) {
+		/* Catch the Click-to-Raise that could be coming */
+		XGrabButton(dpy, AnyButton, AnyModifier, sel->win, False,
+			BUTTONMASK, GrabModeSync, GrabModeSync, None, None);
 		unfocus(sel, 0);
+		}
 	if (c) {
 		if (c->isurgent)
 			seturgent(c, 0);
-		grabbuttons(c);
 		XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
 		setfocus(c);
 	} else {
@@ -648,7 +631,6 @@ focusstack(const Arg *arg)
 	if (c) {
 		focus(c);
 		restack();
-		grabbuttons(c);
 	}
 }
 
@@ -720,43 +702,25 @@ gettextprop(Window w, Atom atom, char *text, unsigned int size)
 }
 
 void
-grabbuttons(Client *c)
-{
-	updatenumlockmask();
-	{
-		unsigned int i, j;
-		unsigned int modifiers[] = {
-			0, LockMask, numlockmask, numlockmask|LockMask };
-		Window cw, dwin;
-		Client *cwc = NULL;
-
-		XUngrabButton(dpy, AnyButton, AnyModifier, c->win);
-
-		XQueryPointer(dpy, root, &dwin, &cw, &di, &di, &di, &di, &dui);
-		if (cw && (cwc = wintoclient(cw)))
-			if ((cwc != raised) || (cwc->isfloating && cwc != clients))
-				XGrabButton(dpy, AnyButton, AnyModifier, cwc->win, False,
-					BUTTONMASK, GrabModeSync, GrabModeSync, None, None);
-
-		for (i = 0; i < LENGTH(buttons); i++)
-			if (buttons[i].click == ClkClientWin)
-				for (j = 0; j < LENGTH(modifiers); j++)
-					XGrabButton(dpy, buttons[i].button,
-						buttons[i].mask | modifiers[j],
-						c->win, False, BUTTONMASK,
-						GrabModeAsync, GrabModeSync, None, None);
-	}
-}
-
-void
 grabkeys(void)
 {
-	updatenumlockmask();
+	unsigned int i, j;
+	KeyCode code;
+	XModifierKeymap *modmap;
+
+	/* update numlock mask */
+	numlockmask = 0;
+	modmap = XGetModifierMapping(dpy);
+	for (i = 0; i < 8; i++)
+		for (j = 0; j < modmap->max_keypermod; j++)
+			if (modmap->modifiermap[i * modmap->max_keypermod + j]
+				== XKeysymToKeycode(dpy, XK_Num_Lock))
+				numlockmask = (1 << i);
+	XFreeModifiermap(modmap);
+
 	{
-		unsigned int i, j;
 		unsigned int modifiers[] = {
 			0, LockMask, numlockmask, numlockmask|LockMask };
-		KeyCode code;
 
 		XUngrabKey(dpy, AnyKey, AnyModifier, root);
 		for (i = 0; i < LENGTH(keys); i++)
@@ -781,9 +745,7 @@ grabresize(const Arg *arg) {
 	/* prevent keyrepeats interfering with grabs,
 	   only grab if there is a selected window,
 	   no support moving fullscreen windows by mouse */
-	if (grabguard || !(c = sel) || c->isfullscreen)
-		return;
-	if (!XQueryPointer(dpy, root, &dwin, &dwin, &x, &y, &di, &di, &dui))
+	if (grabguard || !(c = sel) || c->isfullscreen || !MOUSEINF(dwin, x, y, dui))
 		return;
 	restack();
 	nc = oc = *c;
@@ -865,34 +827,24 @@ grabresize(const Arg *arg) {
 		nmain[m1] = MAX(1, mons[m1].mh / HEIGHT(c));
 		tile();
 	}
-
-	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
-	if (sel)
-		grabbuttons(sel);
 }
 
 void
 grabresizecheck(Client *c) {
 	int m, x, y;
 	unsigned int mask;
-	Window cw;
 	XEvent ev;
 
-	if (!(c = sel) || c->isfullscreen)
-		return;
-	if (!XQueryPointer(dpy, root, &dwin, &dwin, &x, &y, &di, &di, &mask))
-		return;
-	if (mask & (Button1Mask|Button2Mask|Button3Mask|Button4Mask|Button5Mask))
-		return;
-	if (!MOVEZONE(c, x, y) && !RESIZEZONE(c, x, y))
-		return;
-	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
-		None, cursor[CurResize]->cursor, CurrentTime) != GrabSuccess)
+	if (!MOUSEINF(dwin, x, y, mask)
+	|| (mask & (Button1Mask|Button2Mask|Button3Mask|Button4Mask|Button5Mask))
+	|| (!MOVEZONE(c, x, y) && !RESIZEZONE(c, x, y)) || c != sel
+	|| (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
+		None, cursor[CurResize]->cursor, CurrentTime) != GrabSuccess))
 		return;
 
 	do {
-		XMaskEvent(dpy, MOUSEMASK|ExposureMask|SubstructureRedirectMask|
-			KeyPressMask|KeyReleaseMask, &ev);
+		XMaskEvent(dpy, MOUSEMASK|ExposureMask|SubstructureRedirectMask
+			|KeyPressMask, &ev);
 		switch(ev.type) {
 		case KeyPress:
 			XUngrabPointer(dpy, CurrentTime);
@@ -922,22 +874,13 @@ grabresizecheck(Client *c) {
 	} while (ev.type != ButtonPress && ev.type != ButtonRelease
 		&& ev.type != KeyPress && (MOVEZONE(c, x, y) || RESIZEZONE(c, x, y)));
 	XUngrabPointer(dpy, CurrentTime);
-
-	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
-	if (!XQueryPointer(dpy, root, &dwin, &cw, &di, &di, &di, &di, &dui))
-		return;
-	if (cw && (c = wintoclient(cw)))
-		focus(c);
 }
 
 
 void
 grabstack(const Arg *arg)
 {
-	if (!stackgrabbed)
-		XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync,
-			CurrentTime);
-	stackgrabbed = 1;
+	XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
 	focusstack(arg);
 }
 
@@ -952,20 +895,16 @@ keypress(XEvent *e)
 	keysym = XKeycodeToKeysym(dpy, (KeyCode)ev->keycode, 0);
 	for (i = 0; i < LENGTH(keys); i++)
 		if (keysym == keys[i].keysym
-		&& CLEANMASK(keys[i].mod) == CLEANMASK(ev->state)
-		&& keys[i].func)
+		&& CLEANMASK(keys[i].mod) == CLEANMASK(ev->state))
 			keys[i].func(&(keys[i].arg));
 }
 
 void
 keyrelease(XEvent *e)
 {
-	if (stackgrabbed && grabstackrelease
-		== XKeycodeToKeysym(dpy, (KeyCode)e->xkey.keycode, 0)) {
-		if (sel)
-			pop(sel);
+	if (stackrelease == XKeycodeToKeysym(dpy, (KeyCode)e->xkey.keycode, 0)) {
+		if (sel) pop(sel);
 		XUngrabKeyboard(dpy, CurrentTime);
-		stackgrabbed = 0;
 	}
 }
 
@@ -1013,9 +952,9 @@ manage(Window w, XWindowAttributes *wa)
 	}
 
 	/* find current monitor */
-	if (XQueryPointer(dpy, root, &dwin, &dwin, &x, &y, &di, &di, &dui)) {
+	if (MOUSEINF(dwin, x, y, dui))
 		for (m = MONLEN-1; m > 0 && !INMON(x, y, mons[m]); m--);
-	} else m = 0;
+	else m = 0;
 	/* adjust to current monitor */
 	if (c->x + WIDTH(c) > mons[m].mx + mons[m].mw)
 		c->x = c->fx = mons[m].mx + mons[m].mw - WIDTH(c);
@@ -1044,7 +983,6 @@ manage(Window w, XWindowAttributes *wa)
 		raised = c;
 	}
 	attach(c);
-	grabbuttons(c);
 	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32,
 		PropModeAppend, (unsigned char *) &(c->win), 1);
 	/* some windows require this */
@@ -1150,7 +1088,7 @@ propertynotify(XEvent *e)
 void
 quit(const Arg *arg)
 {
-	running = 0;
+	end = 1;
 }
 
 void
@@ -1160,7 +1098,7 @@ rawmotion(XEvent *e)
 	Window cw;
 	Client *c;
 
-	if (!XQueryPointer(dpy, root, &dwin, &cw, &rx, &ry, &di, &di, &dui))
+	if (!MOUSEINF(cw, rx, ry, dui))
 		return;
 
 	/* top bar raise when mouse hits the screen edge.
@@ -1180,7 +1118,7 @@ rawmotion(XEvent *e)
 	barfocus = bf;
 
 	/* watch for border edge locations for resizing */
-	if (cw && cw != root && (c = wintoclient(cw)))
+	if ((c = wintoclient(cw)))
 		grabresizecheck(c);
 }
 void
@@ -1215,7 +1153,6 @@ void
 restack(void)
 {
 	Client *c;
-	XEvent ev;
 	XWindowChanges wc;
 
 	drawbar(0);
@@ -1241,7 +1178,6 @@ restack(void)
 	if (barfocus)
 		XRaiseWindow(dpy, barwin);
 	XSync(dpy, False);
-	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
 }
 
 void
@@ -1250,7 +1186,7 @@ run(void)
 	XEvent ev;
 	/* main event loop */
 	XSync(dpy, False);
-	while (running && !XNextEvent(dpy, &ev))
+	while (!end && !XNextEvent(dpy, &ev))
 		if (handler[ev.type])
 			handler[ev.type](&ev); /* call handler */
 }
@@ -1537,10 +1473,6 @@ void
 tag(const Arg *arg)
 {
 	if (sel && arg->ui & TAGMASK) {
-		if (sel->tags == (arg->ui & TAGMASK)) {
-			focusstack(&(Arg){.i = -1});
-			return;
-		}
 		sel->tags = arg->ui & TAGMASK;
 		focus(NULL);
 		arrange();
@@ -1709,22 +1641,6 @@ updatemonitors(XEvent *e)
 }
 
 void
-updatenumlockmask(void)
-{
-	unsigned int i, j;
-	XModifierKeymap *modmap;
-
-	numlockmask = 0;
-	modmap = XGetModifierMapping(dpy);
-	for (i = 0; i < 8; i++)
-		for (j = 0; j < modmap->max_keypermod; j++)
-			if (modmap->modifiermap[i * modmap->max_keypermod + j]
-				== XKeysymToKeycode(dpy, XK_Num_Lock))
-				numlockmask = (1 << i);
-	XFreeModifiermap(modmap);
-}
-
-void
 updatesizehints(Client *c)
 {
 	long msize;
@@ -1818,10 +1734,6 @@ updatewmhints(Client *c)
 void
 view(const Arg *arg)
 {
-	if ((arg->ui & TAGMASK) == tagset[seltags]) {
-		focusstack(&(Arg){.i = +1});
-		return;
-	}
 	seltags ^= 1; /* toggle sel tagset */
 	if (arg->ui & TAGMASK)
 		tagset[seltags] = arg->ui & TAGMASK;
@@ -1879,9 +1791,7 @@ xerrorstart(Display *dpy, XErrorEvent *ee)
 void
 zoom(const Arg *arg)
 {
-	Client *c = sel;
-	if (!c || c == clients) return;
-	pop(c);
+	if (sel && sel != clients) pop(sel);
 }
 
 int

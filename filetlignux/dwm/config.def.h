@@ -1,20 +1,20 @@
 /* See LICENSE file for copyright and license details. */
 
-/* This is a minimal fork to dwm.
+/* This is a minimal fork to dwm, aiming to be smaller, simpler
+ * and friendlier.
  *
  * Changes to dwm focus on default behaviour being more familiar
- * to users of less-leet window managers, while still supporting all
+ * to users of less-leet window managers, while still supporting
  * productivity boosting behaviours. Consider this like a gateway
- * drug to the beauty of dwm.
+ * drug to the beauty of dwm - friendly to noob and leet alike.
  *
  * - There is only a tiled layout but windows will launch in floating mode.
+ * - Monitor association of windows based on floating mode position.
  * - Fullscreen mode for windows replaces the monocle layout.
  * - Less daunting bar arrangement.
- * - Additional window states:
- *     * raised - visible above all other windows, even if tiled.
- *     * zoomed - at the top of the stack (also applies to floating windows).
  * - Changed bindings to be closer to less-leet window managers.
  *     * Alt+Tab combos raise windows temporarily, and then zoom on release.
+ * - Mouse resize movements triggered by keys not buttons.
  * - Mouse resize controls at the edge of windows. */
 
 #include <X11/XF86keysym.h>
@@ -55,12 +55,14 @@ static Monitor mons[] = {
 	{1920, 0, 500, 1080},
 	{3440, 0, 400,  1080}
 };
-*/
+ * or to autodetect up to 3 monitors:
 static Monitor mons[] = {{0}, {0}, {0}};
+*/
+static Monitor mons[] = {{0}};
 /* factor of main area size [0.05..0.95] (for each monitor) */
-static float mfact[] = {0.55, 0.55, 0.55};
+static float mfact[] = {0.6};
 /* number of clients in main area (for each monitor*/
-static int nmain[] = {1, 1, 1};
+static int nmain[] = {1};
 static const int resizehints = 1;
                            /* 1 means respect size hints in tiled resizals */
 
@@ -79,38 +81,29 @@ static const char *mutevol[] = { "volumemute", NULL };
 static const char *ssleep[]  = { "sussleep", NULL };
 static const char *dimup[]   = { "dimup", NULL };
 static const char *dimdown[] = { "dimdown", NULL };
-static const char *helpcmd[] = { "st",
-"-g80x30", "-t", "FiletLignux Controls", "-e",
-"bash", "-c", "printf 'FiletLignux Controls\n\
-               Alt+`: launcher\n\
-         Shift+Alt+`: open terminal\n\
-             Shift+`: move window with mouse\n\
-              Ctrl+`: resize window with mouse\n\
-        Ctrl+Shift+`: tile window (raised)\n\
-           Alt+Enter: fullscreen window\n\
-             LButton: raise window (zoom if not tiled)\n\
-              Alt+F4: close window\n\
-        Shift+Alt+F4: lock\n\
-       Shift+Ctrl+F4: sleep\n\
-   Shift+Ctrl+Alt+F4: quit\n\
-\n\
-             Alt+Tab: next window (raise and focus, then zoom on release)\n\
-       Shift+Alt+Tab: previous window (raise and focus, then zoom on release)\n\
-\n\
-       Ctrl+Alt+Down: next window (raise and focus)\n\
-         Ctrl+Alt+Up: previous window (raise and focus)\n\
-      Ctrl+Alt+Enter: raise and zoom window\n\
-\n\
-           Alt+[1-9]: switch workspace (or next window)\n\
-      Ctrl+Alt+[1-9]: combine workspace\n\
-     Shift+Alt+[1-9]: move window to workspace (or previous window)\n\
-Shift+Ctrl+Alt+[1-9]: add window to workspace\n\
-         Shift+Alt+0: add window to all workspaces\n\
-       Ctrl+Alt+Left: switch to previous workspace\n\
-      Ctrl+Alt+Right: switch to next workspace\n\
- Shift+Ctrl+Alt+Left: move window and switch to previous workspace\n\
-Shift+Ctrl+Alt+Right: move window and switch to next workspace\n\
-'; read -s -n 1", NULL };
+static const char *helpcmd[] = { "st", "-g68x23", "-t", "FiletLignux Controls",
+"-e", "bash", "-c", "printf 'FiletLignux Controls\n\
+                     Alt+`: launcher\n\
+               Shift+Alt+`: terminal\n\
+                 LeftClick: raise window\n\
+                   Shift+`: move window\n\
+                    Ctrl+`: resize window\n\
+              Ctrl+Shift+`: tile window\n\
+                 Alt+Enter: fullscreen window\n\
+            Ctrl+Alt+Enter: raise window\n\
+           (Shift+)Alt+Tab: (prev/)next window, and raise\n\
+          Ctrl+Alt+Up/Down: prev/next window\n\
+       Ctrl+Alt+Left/Right: switch to prev/next workspace\n\
+ Shift+Ctrl+Alt+Left/Right: move with window to prev/next workspace\n\
+                 Alt+[1-9]: switch workspace\n\
+            Ctrl+Alt+[1-9]: combine workspace\n\
+           Shift+Alt+[1-9]: move window to workspace\n\
+      Shift+Ctrl+Alt+[1-9]: add window to workspace\n\
+               Shift+Alt+0: add window to all workspaces\n\
+                    Alt+F4: close window\n\
+              Shift+Alt+F4: lock\n\
+             Shift+Ctrl+F4: sleep\n\
+         Shift+Ctrl+Alt+F4: quit\n'; read -s -n 1", NULL };
 
 /* key definitions */
 #define MODKEY Mod1Mask
@@ -120,7 +113,7 @@ Shift+Ctrl+Alt+Right: move window and switch to next workspace\n\
 	{                  MODKEY|ShiftMask, KEY, tag, {.ui = 1 << TAG} }, \
 	{      MODKEY|ControlMask|ShiftMask, KEY, toggletag, {.ui = 1 << TAG} },
 
-static const KeySym grabstackrelease = XK_Alt_L;
+static const KeySym stackrelease = XK_Alt_L;
 static Key keys[] = {
 	/*                        modifier / key, function / argument */
 	{                       MODKEY, XK_grave, spawn, {.v = dmenucmd } },
@@ -165,21 +158,14 @@ static Key keys[] = {
 	{            0, XF86XK_MonBrightnessDown, spawn, {.v = dimdown } },
 };
 
-/* button definitions
- * click can be ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle,
- * ClkClientWin, or ClkRootWin */
+/* bar actions */
 static Button buttons[] = {
-	/* click,         mask / button, function / argument */
-	{ ClkLtSymbol,       0, Button1, spawn, {.v = dmenucmd } },
-	{ ClkLtSymbol,       0, Button3, spawn, {.v = termcmd } },
-	{ ClkStatusText,     0, Button1, spawn, {.v = helpcmd } },
-
-	{ ClkWinTitle,       0, Button1, focusstack, {.i = +1 } },
-	{ ClkWinTitle,       0, Button3, focusstack, {.i = -1 } },
-
-	{ ClkTagBar,         0, Button1, view, {0} },
-	{ ClkTagBar,         0, Button3, toggleview, {0} },
-	{ ClkTagBar, ShiftMask, Button1, tag, {0} },
-	{ ClkTagBar, ShiftMask, Button3, toggletag, {0} },
+	/* click,      button, function / argument */
+	{ ClkLauncher, Button1, spawn, {.v = dmenucmd } },
+	{ ClkWinTitle, Button1, focusstack, {.i = +1 } },
+	{ ClkWinTitle, Button3, focusstack, {.i = -1 } },
+	{ ClkStatus,   Button1, spawn, {.v = helpcmd } },
+	{ ClkTagBar,   Button1, view, {0} },
+	{ ClkTagBar,   Button3, tag, {0} },
 };
 
