@@ -157,13 +157,14 @@ static void mappingnotify(XEvent *e);
 static void maprequest(XEvent *e);
 static void moveview(const Arg *arg);
 static Client *nexttiled(Client *c);
+static void pin(const Arg *arg);
 static void pop(Client *);
 static void propertynotify(XEvent *e);
 static void quit(const Arg *arg);
 static void rawmotion(XEvent *e);
 static void resize(Client *c, int x, int y, int w, int h);
 static void resizeclient(Client *c, int x, int y, int w, int h);
-static void restack(void);
+static void restack(int notify);
 static void run(void);
 static void scan(void);
 static int sendevent(Client *c, Atom proto);
@@ -205,12 +206,11 @@ static char stext[256];
 static int screen;
 static int sw, sh;           /* X display screen geometry width, height */
 static Window barwin;
+static int barfocus;
 static int bh, blw, by, vw;  /* bar geometry */
 static int lrpad;            /* sum of left and right padding for text */
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask;
-static int barfocus;
-static Window *lastraised = NULL;
 static unsigned int seltags;
 static unsigned int tagset[2];
 static void (*handler[LASTEvent]) (XEvent *) = {
@@ -237,8 +237,7 @@ static Clr **scheme;
 static Display *dpy;
 static Drw *drw;
 static Client *clients;
-static Client *sel;
-static Client *raised;
+static Client *pinned, *sel, *raised;
 static Window root, wmcheckwin;
 /* dummy variables */
 static int di;
@@ -313,7 +312,7 @@ arrange(void)
 {
 	showhide(clients);
 	tile();
-	restack();
+	restack(1);
 }
 
 void
@@ -346,8 +345,8 @@ buttonpress(XEvent *e)
 	} else if ((c = wintoclient(ev->window))) {
 		XAllowEvents(dpy, ReplayPointer, CurrentTime);
 		if (c->isfloating) pop(c);
-		XRaiseWindow(dpy, c->win);
 		raised = c;
+		restack(0);
 		XUngrabButton(dpy, AnyButton, AnyModifier, c->win);
 	}
 }
@@ -463,7 +462,6 @@ configurerequest(XEvent *e)
 			wc.stack_mode = ev->detail;
 		XConfigureWindow(dpy, ev->window, ev->value_mask, &wc);
 	}
-	XSync(dpy, False);
 }
 
 void
@@ -592,7 +590,6 @@ focus(Client *c)
 	} else {
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
-		raised = c;
 	}
 	sel = c;
 	drawbar(0);
@@ -630,7 +627,8 @@ focusstack(const Arg *arg)
 	}
 	if (c) {
 		focus(c);
-		restack();
+		raised = c;
+		restack(0);
 	}
 }
 
@@ -747,7 +745,8 @@ grabresize(const Arg *arg) {
 	   no support moving fullscreen windows by mouse */
 	if (grabguard || !(c = sel) || c->isfullscreen || !MOUSEINF(dwin, x, y, dui))
 		return;
-	restack();
+	raised = c;
+	restack(0);
 	nc = oc = *c;
 	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
 		None, cursor[type == DragMove ? CurMove : CurResize]->cursor, CurrentTime)
@@ -979,8 +978,8 @@ manage(Window w, XWindowAttributes *wa)
 	if (!c->isfloating)
 		c->isfloating = c->oldstate = trans != None || c->isfixed;
 	if (c->isfloating) {
-		XRaiseWindow(dpy, c->win);
 		raised = c;
+		restack(0);
 	}
 	attach(c);
 	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32,
@@ -1032,6 +1031,16 @@ nexttiled(Client *c)
 {
 	for (; c && (c->isfloating || !ISVISIBLE(c)); c = c->next);
 	return c;
+}
+
+void
+pin(const Arg *arg)
+{
+	if (pinned && sel == pinned) pinned = NULL;
+	else if (sel && pinned != sel) {
+		pinned = sel;
+		restack(0);
+	}
 }
 
 void
@@ -1094,7 +1103,7 @@ quit(const Arg *arg)
 void
 rawmotion(XEvent *e)
 {
-	int rx, ry, bf;
+	int rx, ry;
 	Window cw;
 	Client *c;
 
@@ -1103,22 +1112,18 @@ rawmotion(XEvent *e)
 
 	/* top bar raise when mouse hits the screen edge.
 	   especially useful for apps that capture the kayboard. */
-	bf = topbar ? ry <= mons->my : ry >= mons->my + mons->mh - 1;
-	bf = bf && (rx >= mons->mx) && (rx <= mons->mx + mons->mw);
-	if (bf & barfocus) {
+	if (topbar ? ry <= mons->my : ry >= mons->my + mons->mh - 1
+		&& (rx >= mons->mx) && (rx <= mons->mx + mons->mw) && !barfocus) {
 		XRaiseWindow(dpy, barwin);
-		if (sel)
-			unfocus(sel, 1);
+		if (sel) unfocus(sel, 1);
+		barfocus = 1;
+	} else if (barfocus) {
+		barfocus = 0;
+		focus(sel);
+		restack(0);
 	}
-	else if (!bf && barfocus && sel) {
-		XRaiseWindow(dpy, lastraised ? *lastraised : sel->win);
-		XSetWindowBorder(dpy, sel->win, scheme[SchemeSel][ColBorder].pixel);
-		setfocus(sel);
-	}
-	barfocus = bf;
-
 	/* watch for border edge locations for resizing */
-	if ((c = wintoclient(cw)))
+	else if ((c = wintoclient(cw)))
 		grabresizecheck(c);
 }
 void
@@ -1150,34 +1155,51 @@ resizeclient(Client *c, int x, int y, int w, int h)
 }
 
 void
-restack(void)
+restack(int notify)
 {
-	Client *c;
+	int i = 0;
+	Client *c, *tc;
+	Window up[3];
+	XEvent ev;
 	XWindowChanges wc;
 
-	drawbar(0);
-	if (!sel)
-		return;
-	XLowerWindow(dpy, barwin);
-	{
-		wc.stack_mode = Below;
-		wc.sibling = barwin;
-		for (c = clients; c; c = c->next)
-			if (!c->isfloating && ISVISIBLE(c)) {
+	if (barfocus) up[i++] = barwin;
+	if (pinned) up[i++] = pinned->win;
+	if (raised) up[i++] = raised->win;
+	if (!barfocus) up[i++] = barwin;
+	XRaiseWindow(dpy, up[0]);
+	XRestackWindows(dpy, up, i);
+
+	for (tc = nexttiled(clients); tc && (tc == raised || tc == pinned);
+		tc = nexttiled(tc->next));
+	wc.stack_mode = Above;
+	for (c = clients; c && (!ISVISIBLE(c)
+		|| !c->isfullscreen || c == raised || c == pinned); c = c->next);
+	if (c) {
+		XLowerWindow(dpy, c->win);
+		wc.sibling = c->win;
+		while ((c = c->next)) {
+			if (c->isfullscreen && ISVISIBLE(c) && c != raised && c != pinned) {
 				XConfigureWindow(dpy, c->win, CWSibling|CWStackMode, &wc);
 				wc.sibling = c->win;
 			}
-			else if (c->isfullscreen && c != sel)
-				XLowerWindow(dpy, c->win);
+		}
+		if (tc) XConfigureWindow(dpy, tc->win, CWSibling|CWStackMode, &wc);
+	} else if (tc) XLowerWindow(dpy, tc->win);
+	if (tc) {
+		wc.stack_mode = Below;
+		wc.sibling = tc->win;
+		while ((tc = nexttiled(tc->next))) {
+			if (tc != pinned && tc != raised) {
+				XConfigureWindow(dpy, tc->win, CWSibling|CWStackMode, &wc);
+				wc.sibling = tc->win;
+			}
+		}
 	}
-	if (!barfocus)
-		XRaiseWindow(dpy, barwin);
-	lastraised = &sel->win;
-	XRaiseWindow(dpy, sel->win);
-	raised = sel;
-	if (barfocus)
-		XRaiseWindow(dpy, barwin);
-	XSync(dpy, False);
+	if (!notify) {
+		XSync(dpy, False);
+		while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
+	}
 }
 
 void
@@ -1288,7 +1310,6 @@ setfullscreen(Client *c, int fullscreen)
 		w = mons[m2].mx - mons[m1].mx + mons[m2].mw;
 		h = mons[m2].my - mons[m1].my + mons[m2].mh;
 		resizeclient(c, mons[m1].mx, mons[m1].my, w, h);
-		XRaiseWindow(dpy, c->win);
 		raised = c;
 	} else if (!fullscreen && c->isfullscreen){
 		/* change back to original floating parameters */
@@ -1297,13 +1318,9 @@ setfullscreen(Client *c, int fullscreen)
 		c->isfullscreen = 0;
 		c->isfloating = c->oldstate;
 		c->bw = c->oldbw;
-		c->x = c->fx;
-		c->y = c->fy;
-		c->w = c->fw;
-		c->h = c->fh;
-		resizeclient(c, c->x, c->y, c->w, c->h);
-		arrange();
+		resizeclient(c, c->fx, c->fy, c->fw, c->fh);
 	}
+	arrange();
 }
 
 void

@@ -81,16 +81,17 @@ static const char *mutevol[] = { "volumemute", NULL };
 static const char *ssleep[]  = { "sussleep", NULL };
 static const char *dimup[]   = { "dimup", NULL };
 static const char *dimdown[] = { "dimdown", NULL };
-static const char *helpcmd[] = { "st", "-g68x23", "-t", "FiletLignux Controls",
+static const char *helpcmd[] = { "st", "-g68x24", "-t", "FiletLignux Controls",
 "-e", "bash", "-c", "printf 'FiletLignux Controls\n\
                      Alt+`: launcher\n\
                Shift+Alt+`: terminal\n\
                  LeftClick: raise window\n\
                    Shift+`: move window\n\
                     Ctrl+`: resize window\n\
-              Ctrl+Shift+`: tile window\n\
+              Shift+Ctrl+`: tile window\n\
                  Alt+Enter: fullscreen window\n\
             Ctrl+Alt+Enter: raise window\n\
+      Shift+Ctrl+Alt+Enter: pin window\n\
            (Shift+)Alt+Tab: (prev/)next window, and raise\n\
           Ctrl+Alt+Up/Down: prev/next window\n\
        Ctrl+Alt+Left/Right: switch to prev/next workspace\n\
@@ -116,24 +117,22 @@ static const char *helpcmd[] = { "st", "-g68x23", "-t", "FiletLignux Controls",
 static const KeySym stackrelease = XK_Alt_L;
 static Key keys[] = {
 	/*                        modifier / key, function / argument */
-	{                       MODKEY, XK_grave, spawn, {.v = dmenucmd } },
-	{             MODKEY|ShiftMask, XK_grave, spawn, {.v = termcmd } },
-	{                    ShiftMask, XK_grave, grabresize, {.i = DragMove } },
-	{                  ControlMask, XK_grave, grabresize, {.i = DragSize } },
-	{        ControlMask|ShiftMask, XK_grave, togglefloating, {0} },
-	{                      MODKEY, XK_Return, togglefullscreen, {0} },
-	{                          MODKEY, XK_F4, killclient, {0} },
-	{                MODKEY|ShiftMask, XK_F4, spawn, {.v = lockcmd } },
-	{           ShiftMask|ControlMask, XK_F4, spawn, {.v = ssleep } },
-	{    MODKEY|ControlMask|ShiftMask, XK_F4, quit, {0} },
-
-	{                         MODKEY, XK_Tab, grabstack, {.i = +1 } },
-	{               MODKEY|ShiftMask, XK_Tab, grabstack, {.i = -1 } },
-
-	{            MODKEY|ControlMask, XK_Down, focusstack, {.i = +1 } },
-	{              MODKEY|ControlMask, XK_Up, focusstack, {.i = -1 } },
-	{          MODKEY|ControlMask, XK_Return, zoom, {0} },
-
+	{                        MODKEY, XK_grave, spawn, {.v = dmenucmd } },
+	{              MODKEY|ShiftMask, XK_grave, spawn, {.v = termcmd } },
+	{                     ShiftMask, XK_grave, grabresize, {.i = DragMove } },
+	{                   ControlMask, XK_grave, grabresize, {.i = DragSize } },
+	{         ControlMask|ShiftMask, XK_grave, togglefloating, {0} },
+	{                       MODKEY, XK_Return, togglefullscreen, {0} },
+	{           MODKEY|ControlMask, XK_Return, zoom, {0} },
+	{ MODKEY|ControlMask|ShiftMask, XK_Return, pin, {0} },
+	{                          MODKEY, XK_Tab, grabstack, {.i = +1 } },
+	{                MODKEY|ShiftMask, XK_Tab, grabstack, {.i = -1 } },
+	{             MODKEY|ControlMask, XK_Down, focusstack, {.i = +1 } },
+	{               MODKEY|ControlMask, XK_Up, focusstack, {.i = -1 } },
+	{             MODKEY|ControlMask, XK_Left, focusview, {.i = -1 } },
+	{            MODKEY|ControlMask, XK_Right, focusview, {.i = +1 } },
+	{   MODKEY|ControlMask|ShiftMask, XK_Left, moveview, {.i = -1 } },
+	{  MODKEY|ControlMask|ShiftMask, XK_Right, moveview, {.i = +1 } },
 	TAGKEYS( XK_1, 0)
 	TAGKEYS( XK_2, 1)
 	TAGKEYS( XK_3, 2)
@@ -143,19 +142,17 @@ static Key keys[] = {
 	TAGKEYS( XK_7, 6)
 	TAGKEYS( XK_8, 7)
 	TAGKEYS( XK_9, 8)
-
-	{                 MODKEY|ShiftMask, XK_0, tag, {.ui = ~0 } },
-	{            MODKEY|ControlMask, XK_Left, focusview, {.i = -1 } },
-	{           MODKEY|ControlMask, XK_Right, focusview, {.i = +1 } },
-	{  MODKEY|ControlMask|ShiftMask, XK_Left, moveview, {.i = -1 } },
-	{ MODKEY|ControlMask|ShiftMask, XK_Right, moveview, {.i = +1 } },
-
-	{             0, XF86XK_AudioLowerVolume, spawn, {.v = downvol } },
-	{                    0, XF86XK_AudioMute, spawn, {.v = mutevol } },
-	{             0, XF86XK_AudioRaiseVolume, spawn, {.v = upvol } },
-	{                        0, XF86XK_Sleep, spawn, {.v = ssleep } },
-	{              0, XF86XK_MonBrightnessUp, spawn, {.v = dimup } },
-	{            0, XF86XK_MonBrightnessDown, spawn, {.v = dimdown } },
+	{                  MODKEY|ShiftMask, XK_0, tag, {.ui = ~0 } },
+	{                           MODKEY, XK_F4, killclient, {0} },
+	{                 MODKEY|ShiftMask, XK_F4, spawn, {.v = lockcmd } },
+	{            ShiftMask|ControlMask, XK_F4, spawn, {.v = ssleep } },
+	{     MODKEY|ControlMask|ShiftMask, XK_F4, quit, {0} },
+	{              0, XF86XK_AudioLowerVolume, spawn, {.v = downvol } },
+	{                     0, XF86XK_AudioMute, spawn, {.v = mutevol } },
+	{              0, XF86XK_AudioRaiseVolume, spawn, {.v = upvol } },
+	{                         0, XF86XK_Sleep, spawn, {.v = ssleep } },
+	{               0, XF86XK_MonBrightnessUp, spawn, {.v = dimup } },
+	{             0, XF86XK_MonBrightnessDown, spawn, {.v = dimdown } },
 };
 
 /* bar actions */
