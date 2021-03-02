@@ -48,7 +48,7 @@
 #define CLEANMASK(mask)      (mask & ~(numlockmask|LockMask)\
                               & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask\
                                  |Mod3Mask|Mod4Mask|Mod5Mask))
-#define ISVISIBLE(C)            ((C->tags & tagset[seltags]))
+#define ISVISIBLE(C)            ((C->tags & tagset))
 #define LENGTH(X)               (sizeof X / sizeof X[0])
 #define MOUSEMASK               (BUTTONMASK|PointerMotionMask)
 #define MOUSEINF(W,X,Y,M) (XQueryPointer(dpy,root,&dwin,&W,&X,&Y,&di,&di,&M))
@@ -83,7 +83,6 @@ enum { DragMove, DragSize, DragTile};
 typedef union {
 	int i;
 	unsigned int ui;
-	float f;
 	const void *v;
 } Arg;
 
@@ -96,7 +95,7 @@ typedef struct {
 
 typedef struct Client Client;
 struct Client {
-	char name[256];
+	char name[256], zenname[256];
 	float mina, maxa;
 	int x, y, w, h;
 	int fx, fy, fw, fh; /*remember during tiled and fullscreen states */
@@ -107,7 +106,6 @@ struct Client {
 	Client *next;
 	Window win;
 	Time zenping;
-	char zenname[256];
 };
 
 typedef struct {
@@ -211,8 +209,7 @@ static int bh, blw, by, vw;  /* bar geometry */
 static int lrpad;            /* sum of left and right padding for text */
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask;
-static unsigned int seltags;
-static unsigned int tagset[2];
+static unsigned int tagset = 1;
 static void (*handler[LASTEvent]) (XEvent *) = {
 	[ButtonPress] = buttonpress,
 	[ClientMessage] = clientmessage,
@@ -508,7 +505,7 @@ drawbar(int zen)
 	x = vw;
 	for (i = 0; i < LENGTH(tags); i++) {
 		w = TEXTW(tags[i]);
-		drw_setscheme(drw, scheme[tagset[seltags] & 1 << i
+		drw_setscheme(drw, scheme[tagset & 1 << i
 			? SchemeSel : SchemeNorm]);
 		drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
 		if (occ & 1 << i)
@@ -635,7 +632,7 @@ focusstack(const Arg *arg)
 void
 focusview(const Arg *arg)
 {
-	tagset[seltags] = shiftviews(tagset[seltags], arg->i);
+	tagset = shiftviews(tagset, arg->i);
 	focus(NULL);
 	arrange();
 }
@@ -947,7 +944,7 @@ manage(Window w, XWindowAttributes *wa)
 		c->tags = t->tags;
 	} else {
 		c->isfloating = 1;
-		c->tags = tagset[seltags];
+		c->tags = tagset;
 	}
 
 	/* find current monitor */
@@ -1344,7 +1341,6 @@ setup(void)
 	if (!drw_fontset_create(drw, fonts, LENGTH(fonts)))
 		die("no fonts could be loaded.");
 	lrpad = drw->fonts->h;
-	tagset[0] = tagset[1] = 1;
 	/* init monitor layout */
 	if (MONNULL(mons[0])) {
 		updatemonitors(NULL);
@@ -1568,13 +1564,9 @@ toggletag(const Arg *arg)
 void
 toggleview(const Arg *arg)
 {
-	unsigned int newtagset = tagset[seltags] ^ (arg->ui & TAGMASK);
-
-	if (newtagset) {
-		tagset[seltags] = newtagset;
-		focus(NULL);
-		arrange();
-	}
+	tagset ^= (arg->ui & TAGMASK);
+	focus(NULL);
+	arrange();
 }
 
 void
@@ -1751,9 +1743,7 @@ updatewmhints(Client *c)
 void
 view(const Arg *arg)
 {
-	seltags ^= 1; /* toggle sel tagset */
-	if (arg->ui & TAGMASK)
-		tagset[seltags] = arg->ui & TAGMASK;
+	tagset = arg->ui & TAGMASK;
 	focus(NULL);
 	arrange();
 }
