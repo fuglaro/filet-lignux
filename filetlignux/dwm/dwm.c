@@ -236,7 +236,7 @@ static Client *pinned, *sel, *raised;
 static Window root, wmcheckwin;
 /* dummy variables */
 static int di;
-unsigned long dl;
+static unsigned long dl;
 static unsigned int dui;
 static Window dwin;
 
