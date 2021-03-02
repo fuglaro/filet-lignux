@@ -129,10 +129,10 @@ static Key keys[] = {
 	{                MODKEY|ShiftMask, XK_Tab, grabstack, {.i = -1 } },
 	{             MODKEY|ControlMask, XK_Down, focusstack, {.i = +1 } },
 	{               MODKEY|ControlMask, XK_Up, focusstack, {.i = -1 } },
-	{             MODKEY|ControlMask, XK_Left, focusview, {.i = -1 } },
-	{            MODKEY|ControlMask, XK_Right, focusview, {.i = +1 } },
-	{   MODKEY|ControlMask|ShiftMask, XK_Left, moveview, {.i = -1 } },
-	{  MODKEY|ControlMask|ShiftMask, XK_Right, moveview, {.i = +1 } },
+	{             MODKEY|ControlMask, XK_Left, viewshift, {.i = -1 } },
+	{            MODKEY|ControlMask, XK_Right, viewshift, {.i = +1 } },
+	{   MODKEY|ControlMask|ShiftMask, XK_Left, viewtagshift, {.i = -1 } },
+	{  MODKEY|ControlMask|ShiftMask, XK_Right, viewtagshift, {.i = +1 } },
 	TAGKEYS( XK_1, 0)
 	TAGKEYS( XK_2, 1)
 	TAGKEYS( XK_3, 2)
