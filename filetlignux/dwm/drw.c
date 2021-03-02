@@ -130,7 +130,7 @@ xfont_create(Drw *drw, const char *fontname, FcPattern *fontpattern)
 			return NULL;
 		}
 	} else {
-		die("no font specified.");
+		die("no font specified.\n");
 	}
 
 	/* Do not allow using color fonts. This is a workaround for a BadLength
@@ -202,7 +202,7 @@ drw_clr_create(Drw *drw, Clr *dest, const char *clrname)
 	if (!XftColorAllocName(drw->dpy, DefaultVisual(drw->dpy, drw->screen),
 	                       DefaultColormap(drw->dpy, drw->screen),
 	                       clrname, dest))
-		die("error, cannot allocate color '%s'", clrname);
+		die("error, cannot allocate colors.\n");
 }
 
 /* Wrapper to create color schemes. The caller has to call free(3) on the
@@ -345,7 +345,7 @@ drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lp
 
 			if (!drw->fonts->pattern) {
 				/* Refer to the comment in xfont_create for more information. */
-				die("the first font in the cache must be loaded from a font string.");
+				die("the first font in the cache must be loaded from a font string.\n");
 			}
 
 			fcpattern = FcPatternDuplicate(drw->fonts->pattern);
