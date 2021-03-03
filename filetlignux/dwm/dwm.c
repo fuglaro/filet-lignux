@@ -104,7 +104,7 @@ struct Client {
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
 	int bw, fbw, oldbw;
 	unsigned int tags;
-	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen;
+	int isfixed, isfloating, isurgent, oldstate, isfullscreen;
 	Client *next;
 	Window win;
 	Time zenping;
@@ -138,7 +138,6 @@ static void drawbar(int zen);
 static void expose(XEvent *e);
 static void exthandler(XEvent *ev);
 static void focus(Client *c);
-static void focusin(XEvent *e);
 static void focusstack(const Arg *arg);
 static Atom getatomprop(Client *c, Atom prop);
 static long getstate(Window w);
@@ -166,7 +165,6 @@ static void run(void);
 static void scan(void);
 static int sendevent(Client *c, Atom proto);
 static void setclientstate(Client *c, long state);
-static void setfocus(Client *c);
 static void setfullscreen(Client *c, int fullscreen);
 static void setup(void);
 static void seturgent(Client *c, int urg);
@@ -215,7 +213,6 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 	[ConfigureRequest] = configurerequest,
 	[DestroyNotify] = destroynotify,
 	[Expose] = expose,
-	[FocusIn] = focusin,
 	[GenericEvent] = exthandler,
 	[KeyPress] = keypress,
 	[KeyRelease] = keyrelease,
@@ -568,23 +565,18 @@ focus(Client *c)
 		if (c->isurgent)
 			seturgent(c, 0);
 		XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
-		setfocus(c);
+		if (!barfocus) {
+			XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime);
+			XChangeProperty(dpy, root, netatom[NetActiveWindow],
+				XA_WINDOW, 32, PropModeReplace, (unsigned char *) &(c->win), 1);
+			sendevent(c, wmatom[WMTakeFocus]);
+		}
 	} else {
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
 	}
 	sel = c;
 	drawbar(0);
-}
-
-/* there are some broken focus acquiring clients needing extra handling */
-void
-focusin(XEvent *e)
-{
-	XFocusChangeEvent *ev = &e->xfocus;
-
-	if (sel && ev->window != sel->win)
-		setfocus(sel);
 }
 
 void
@@ -942,12 +934,11 @@ manage(Window w, XWindowAttributes *wa)
 
 	wc.border_width = c->bw;
 	XConfigureWindow(dpy, w, CWBorderWidth, &wc);
-	XSetWindowBorder(dpy, w, scheme[SchemeNorm][ColBorder].pixel);
 	configure(c); /* propagates border_width, if size doesn't change */
 	updatewindowtype(c);
 	updatesizehints(c);
 	updatewmhints(c);
-	XSelectInput(dpy, w, FocusChangeMask|PropertyChangeMask|StructureNotifyMask);
+	XSelectInput(dpy, w, PropertyChangeMask|StructureNotifyMask);
 	if (!c->isfloating)
 		c->isfloating = c->oldstate = trans != None || c->isfixed;
 	if (c->isfloating) {
@@ -960,9 +951,9 @@ manage(Window w, XWindowAttributes *wa)
 	/* some windows require this */
 	XMoveResizeWindow(dpy, c->win, c->x + 2 * sw, c->y, c->w, c->h);
 	setclientstate(c, NormalState);
-	focus(c);
 	arrange();
 	XMapWindow(dpy, c->win);
+	focus(c);
 }
 
 void
@@ -1082,7 +1073,7 @@ rawmotion(XEvent *e)
 		barfocus = 1;
 	} else if (barfocus) {
 		barfocus = 0;
-		setfocus(sel);
+		if (sel) focus(sel);
 		restack();
 	}
 
@@ -1090,8 +1081,8 @@ rawmotion(XEvent *e)
 	if (cw != lastcw && (c = wintoclient(cw))) {
 		if (c != sel) focus(c);
 		grabresizecheck(c);
-		lastcw = cw;
 	}
+	lastcw = cw;
 }
 void
 resize(Client *c, int x, int y, int w, int h)
@@ -1234,17 +1225,6 @@ sendevent(Client *c, Atom proto)
 		XSendEvent(dpy, c->win, False, NoEventMask, &ev);
 	}
 	return exists;
-}
-
-void
-setfocus(Client *c)
-{
-	if (!c->neverfocus) {
-		XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime);
-		XChangeProperty(dpy, root, netatom[NetActiveWindow],
-			XA_WINDOW, 32, PropModeReplace, (unsigned char *) &(c->win), 1);
-	}
-	sendevent(c, wmatom[WMTakeFocus]);
 }
 
 void
@@ -1675,10 +1655,6 @@ updatewmhints(Client *c)
 			XSetWMHints(dpy, c->win, wmh);
 		} else
 			c->isurgent = (wmh->flags & XUrgencyHint) ? 1 : 0;
-		if (wmh->flags & InputHint)
-			c->neverfocus = !wmh->input;
-		else
-			c->neverfocus = 0;
 		XFree(wmh);
 	}
 }
