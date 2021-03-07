@@ -1105,8 +1105,8 @@ restack(Client *c, int mode)
 		break;
 	case CliRemove:
 		detach(c);
-		pinned = pinned != c ? pinned : NULL
-		raised = raised != c ? raised : NULL
+		pinned = pinned != c ? pinned : NULL;
+		raised = raised != c ? raised : NULL;
 		break;
 	case CliZoom:
 		if (c) {
@@ -1521,7 +1521,7 @@ unmanage(Client *c, int destroyed)
 		XSetErrorHandler(xerror);
 		XUngrabServer(dpy);
 	}
-	sel = sel != c ? sel : NULL
+	sel = sel != c ? sel : NULL;
 	free(c);
 	XDeleteProperty(dpy, root, netatom[NetClientList]);
 	for (c = clients; c; c = c->next)
