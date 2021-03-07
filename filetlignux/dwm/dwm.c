@@ -81,6 +81,7 @@ enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast };
                                                            /* default atoms */
 enum { ClkLauncher, ClkWinTitle, ClkStatus, ClkTagBar, ClkLast };
 enum { DragMove, DragSize, DragTile };
+enum { CliPin, CliRaise, CliZoom, CliRemove, CliRefresh };
 
 typedef union {
 	int i;
@@ -104,7 +105,7 @@ struct Client {
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
 	int bw, fbw, oldbw;
 	unsigned int tags;
-	int isfixed, isfloating, isurgent, oldstate, isfullscreen;
+	int isfixed, isfloating, isurgent, fstate, isfullscreen;
 	Client *next;
 	Window win;
 	Time zenping;
@@ -154,13 +155,12 @@ static void mappingnotify(XEvent *e);
 static void maprequest(XEvent *e);
 static Client *nexttiled(Client *c);
 static void pin(const Arg *arg);
-static void pop(Client *);
 static void propertynotify(XEvent *e);
 static void quit(const Arg *arg);
 static void rawmotion(XEvent *e);
 static void resize(Client *c, int x, int y, int w, int h);
 static void resizeclient(Client *c, int x, int y, int w, int h);
-static void restack();
+static void restack(Client *c, int mode);
 static void run(void);
 static void scan(void);
 static int sendevent(Client *c, Atom proto);
@@ -179,7 +179,6 @@ static void toggletag(const Arg *arg);
 static void toggleview(const Arg *arg);
 static void unmanage(Client *c, int destroyed);
 static void unmapnotify(XEvent *e);
-static void updateclientlist(void);
 static void updatemonitors(XEvent *e);
 static void updatesizehints(Client *c);
 static void updatestatus(void);
@@ -229,7 +228,7 @@ static Clr **scheme;
 static Display *dpy;
 static Drw *drw;
 static Client *clients;
-static Client *pinned, *sel, *raised;
+static Client *sel;
 static Window root, wmcheckwin;
 /* dummy variables */
 static int di;
@@ -305,7 +304,7 @@ arrange(void)
 	focus(NULL);
 	showhide(clients);
 	tile();
-	restack();
+	restack(NULL, CliRefresh);
 }
 
 void
@@ -339,9 +338,7 @@ buttonpress(XEvent *e)
 		XAllowEvents(dpy, ReplayPointer, CurrentTime);
 		XUngrabButton(dpy, AnyButton, AnyModifier, c->win);
 		focus(c);
-		raised = c;
-		if (c->isfloating) pop(c);
-		else restack();
+		restack(c, c->isfloating ? CliZoom : CliRaise);
 	}
 }
 
@@ -601,8 +598,7 @@ focusstack(const Arg *arg)
 	}
 	if (c) {
 		focus(c);
-		raised = c;
-		restack();
+		restack(c, CliRaise);
 	}
 }
 
@@ -711,8 +707,7 @@ grabresize(const Arg *arg) {
 	   no support moving fullscreen windows by mouse */
 	if (grabguard || !(c = sel) || c->isfullscreen || !MOUSEINF(dwin, x, y, dui))
 		return;
-	raised = c;
-	restack();
+	restack(c, CliRaise);
 	nc = oc = *c;
 	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
 		None, cursor[type == DragMove ? CurMove : CurResize]->cursor, CurrentTime)
@@ -868,7 +863,7 @@ void
 keyrelease(XEvent *e)
 {
 	if (stackrelease == XKeycodeToKeysym(dpy, (KeyCode)e->xkey.keycode, 0)) {
-		if (sel) pop(sel);
+		restack(sel, CliZoom);
 		XUngrabKeyboard(dpy, CurrentTime);
 	}
 }
@@ -909,12 +904,11 @@ manage(Window w, XWindowAttributes *wa)
 
 	updatetitle(c);
 	strcpy(c->zenname, c->name);
-	if (XGetTransientForHint(dpy, w, &trans) && (t = wintoclient(trans))) {
+	if (XGetTransientForHint(dpy, w, &trans) && (t = wintoclient(trans)))
 		c->tags = t->tags;
-	} else {
-		c->isfloating = 1;
+	else
 		c->tags = tagset;
-	}
+	c->isfloating = 1;
 
 	/* find current monitor */
 	if (MOUSEINF(dwin, x, y, dui))
@@ -939,19 +933,14 @@ manage(Window w, XWindowAttributes *wa)
 	updatesizehints(c);
 	updatewmhints(c);
 	XSelectInput(dpy, w, PropertyChangeMask|StructureNotifyMask);
-	if (!c->isfloating)
-		c->isfloating = c->oldstate = trans != None || c->isfixed;
-	if (c->isfloating) {
-		raised = c;
-		restack();
-	}
 	attach(c);
+	restack(c, CliRaise);
 	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32,
 		PropModeAppend, (unsigned char *) &(c->win), 1);
 	/* some windows require this */
 	XMoveResizeWindow(dpy, c->win, c->x + 2 * sw, c->y, c->w, c->h);
 	setclientstate(c, NormalState);
-	arrange();
+	showhide(clients);
 	XMapWindow(dpy, c->win);
 	focus(c);
 }
@@ -990,19 +979,7 @@ nexttiled(Client *c)
 void
 pin(const Arg *arg)
 {
-	if (pinned && sel == pinned) pinned = NULL;
-	else if (sel && pinned != sel) {
-		pinned = sel;
-		restack();
-	}
-}
-
-void
-pop(Client *c)
-{
-	detach(c);
-	attach(c);
-	arrange();
+	restack(sel, CliPin);
 }
 
 void
@@ -1073,8 +1050,8 @@ rawmotion(XEvent *e)
 		barfocus = 1;
 	} else if (barfocus) {
 		barfocus = 0;
-		if (sel) focus(sel);
-		restack();
+		if (sel)
+			focus(sel);
 	}
 
 	/* watch for border edge locations for resizing */
@@ -1113,12 +1090,40 @@ resizeclient(Client *c, int x, int y, int w, int h)
 }
 
 void
-restack()
+restack(Client *c, int mode)
 {
 	int i = 0;
-	Client *c, *tc;
+	static Client *pinned = NULL;
+	static Client *raised = NULL;
 	Window up[3];
 	XWindowChanges wc;
+
+	switch (mode) {
+	case CliPin:
+		/* toggle pinned state */
+		pinned = pinned != c ? c : NULL;
+		break;
+	case CliRemove:
+		detach(c);
+		pinned = pinned != c ? pinned : NULL
+		raised = raised != c ? raised : NULL
+		break;
+	case CliZoom:
+		if (c) {
+			detach(c);
+			attach(c);
+			if (!c->isfloating)
+				arrange();
+		}
+		/* fall through to CliRaise */
+	case CliRaise:
+		raised = c;
+	}
+	/* always lift up anything pinned */
+	if (pinned && pinned->isfloating) {
+		detach(pinned);
+		attach(pinned);
+	}
 
 	if (barfocus) up[i++] = barwin;
 	if (pinned) up[i++] = pinned->win;
@@ -1126,33 +1131,27 @@ restack()
 	if (!barfocus) up[i++] = barwin;
 	XRaiseWindow(dpy, up[0]);
 	XRestackWindows(dpy, up, i);
+	wc.stack_mode = Below;
+	wc.sibling = up[i - 1];
 
-	for (tc = nexttiled(clients); tc && (tc == raised || tc == pinned);
-		tc = nexttiled(tc->next));
-	wc.stack_mode = Above;
-	for (c = clients; c && (!ISVISIBLE(c)
-		|| !c->isfullscreen || c == raised || c == pinned); c = c->next);
-	if (c) {
-		XLowerWindow(dpy, c->win);
-		wc.sibling = c->win;
-		while ((c = c->next)) {
-			if (c->isfullscreen && ISVISIBLE(c) && c != raised && c != pinned) {
-				XConfigureWindow(dpy, c->win, CWSibling|CWStackMode, &wc);
-				wc.sibling = c->win;
-			}
+	/* order floating layer */
+	for (c = clients; c; c = c->next)
+		if (c != pinned && c != raised && c->isfloating && !c->isfullscreen) {
+			XConfigureWindow(dpy, c->win, CWSibling|CWStackMode, &wc);
+			wc.sibling = c->win;
 		}
-		if (tc) XConfigureWindow(dpy, tc->win, CWSibling|CWStackMode, &wc);
-	} else if (tc) XLowerWindow(dpy, tc->win);
-	if (tc) {
-		wc.stack_mode = Below;
-		wc.sibling = tc->win;
-		while ((tc = nexttiled(tc->next))) {
-			if (tc != pinned && tc != raised) {
-				XConfigureWindow(dpy, tc->win, CWSibling|CWStackMode, &wc);
-				wc.sibling = tc->win;
-			}
+	/* order tiled layer */
+	for (c = clients; c; c = c->next)
+		if (c != pinned && c != raised && !c->isfloating) {
+			XConfigureWindow(dpy, c->win, CWSibling|CWStackMode, &wc);
+			wc.sibling = c->win;
 		}
-	}
+	/* order fullscreen layer */
+	for (c = clients; c; c = c->next)
+		if (c != pinned && c != raised && c->isfullscreen) {
+			XConfigureWindow(dpy, c->win, CWSibling|CWStackMode, &wc);
+			wc.sibling = c->win;
+		}
 }
 
 void
@@ -1236,7 +1235,7 @@ setfullscreen(Client *c, int fullscreen)
 		XChangeProperty(dpy, c->win, netatom[NetWMState], XA_ATOM, 32,
 			PropModeReplace, (unsigned char*)&netatom[NetWMFullscreen], 1);
 		c->isfullscreen = 1;
-		c->oldstate = c->isfloating;
+		c->fstate = c->isfloating;
 		c->fbw = c->bw;
 		c->bw = 0;
 		c->isfloating = 1;
@@ -1251,13 +1250,14 @@ setfullscreen(Client *c, int fullscreen)
 		w = mons[m2].mx - mons[m1].mx + mons[m2].mw;
 		h = mons[m2].my - mons[m1].my + mons[m2].mh;
 		resizeclient(c, mons[m1].mx, mons[m1].my, w, h);
-		raised = c;
+		restack(c, CliRaise);
+
 	} else if (!fullscreen && c->isfullscreen){
 		/* change back to original floating parameters */
 		XChangeProperty(dpy, c->win, netatom[NetWMState], XA_ATOM, 32,
 			PropModeReplace, (unsigned char*)0, 0);
 		c->isfullscreen = 0;
-		c->isfloating = c->oldstate;
+		c->isfloating = c->fstate;
 		c->bw = c->fbw;
 		resizeclient(c, c->fx, c->fy, c->fw, c->fh);
 	}
@@ -1509,7 +1509,7 @@ unmanage(Client *c, int destroyed)
 {
 	XWindowChanges wc;
 
-	detach(c);
+	restack(c, CliRemove);
 	if (!destroyed) {
 		wc.border_width = c->oldbw;
 		XGrabServer(dpy); /* avoid race conditions */
@@ -1521,9 +1521,12 @@ unmanage(Client *c, int destroyed)
 		XSetErrorHandler(xerror);
 		XUngrabServer(dpy);
 	}
-	if (sel == c) sel = NULL;
+	sel = sel != c ? sel : NULL
 	free(c);
-	updateclientlist();
+	XDeleteProperty(dpy, root, netatom[NetClientList]);
+	for (c = clients; c; c = c->next)
+		XChangeProperty(dpy, root, netatom[NetClientList],
+			XA_WINDOW, 32, PropModeAppend, (unsigned char *) &(c->win), 1);
 	arrange();
 }
 
@@ -1539,18 +1542,6 @@ unmapnotify(XEvent *e)
 		else
 			unmanage(c, 0);
 	}
-}
-
-void
-updateclientlist()
-{
-	Client *c;
-
-	XDeleteProperty(dpy, root, netatom[NetClientList]);
-	for (c = clients; c; c = c->next)
-		XChangeProperty(dpy, root, netatom[NetClientList],
-			XA_WINDOW, 32, PropModeAppend,
-			(unsigned char *) &(c->win), 1);
 }
 
 void
@@ -1730,7 +1721,7 @@ xerrorstart(Display *dpy, XErrorEvent *ee)
 void
 zoom(const Arg *arg)
 {
-	if (sel) pop(sel);
+	restack(sel, CliZoom);
 }
 
 int
