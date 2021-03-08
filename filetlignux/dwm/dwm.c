@@ -71,12 +71,14 @@
                                  : (TAGS << I) | (TAGS >> (LENGTH(tags) - I)))
 #define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
 
+#define PROPADD(P, C, A) {XChangeProperty(dpy, root, netatom[A], XA_WINDOW,\
+                         32, P, (unsigned char *) &(C->win), 1);}
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
 enum { SchemeNorm, SchemeSel }; /* color schemes */
-enum { NetSupported, NetWMName, NetWMState, NetWMCheck,
+enum { NetSupported, NetWMName, NetWMState, NetWMCheck, /* EWMH atoms */
        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
-       NetWMWindowTypeDialog, NetClientList, NetLast }; /* EWMH atoms */
+       NetWMWindowTypeDialog, NetClientList, NetCliStack, NetLast };
 enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast };
                                                            /* default atoms */
 enum { ClkLauncher, ClkWinTitle, ClkStatus, ClkTagBar, ClkLast };
@@ -935,8 +937,7 @@ manage(Window w, XWindowAttributes *wa)
 	XSelectInput(dpy, w, PropertyChangeMask|StructureNotifyMask);
 	attach(c);
 	restack(c, CliRaise);
-	XChangeProperty(dpy, root, netatom[NetClientList], XA_WINDOW, 32,
-		PropModeAppend, (unsigned char *) &(c->win), 1);
+	PROPADD(PropModeAppend, c, NetClientList)
 	/* some windows require this */
 	XMoveResizeWindow(dpy, c->win, c->x + 2 * sw, c->y, c->w, c->h);
 	setclientstate(c, NormalState);
@@ -1054,10 +1055,13 @@ rawmotion(XEvent *e)
 			focus(sel);
 	}
 
+//TODO get rid of the lastcw thing.
+// Replace with using the sel->win and event's x,y. FAST!
+
 	/* watch for border edge locations for resizing */
 	if (cw != lastcw && (c = wintoclient(cw))) {
 		if (c != sel) focus(c);
-		grabresizecheck(c);
+		grabresizecheck(c); /* seems harder to hit */
 	}
 	lastcw = cw;
 }
@@ -1125,9 +1129,17 @@ restack(Client *c, int mode)
 		attach(pinned);
 	}
 
+
+	XDeleteProperty(dpy, root, netatom[NetCliStack]);
 	if (barfocus) up[i++] = barwin;
-	if (pinned) up[i++] = pinned->win;
-	if (raised) up[i++] = raised->win;
+	if (pinned) {
+		up[i++] = pinned->win;
+		PROPADD(PropModePrepend, pinned, NetCliStack)
+	}
+	if (raised) {
+		up[i++] = raised->win;
+		PROPADD(PropModePrepend, raised, NetCliStack)
+	}
 	if (!barfocus) up[i++] = barwin;
 	XRaiseWindow(dpy, up[0]);
 	XRestackWindows(dpy, up, i);
@@ -1139,18 +1151,21 @@ restack(Client *c, int mode)
 		if (c != pinned && c != raised && c->isfloating && !c->isfullscreen) {
 			XConfigureWindow(dpy, c->win, CWSibling|CWStackMode, &wc);
 			wc.sibling = c->win;
+			PROPADD(PropModePrepend, c, NetCliStack)
 		}
 	/* order tiled layer */
 	for (c = clients; c; c = c->next)
 		if (c != pinned && c != raised && !c->isfloating) {
 			XConfigureWindow(dpy, c->win, CWSibling|CWStackMode, &wc);
 			wc.sibling = c->win;
+			PROPADD(PropModePrepend, c, NetCliStack)
 		}
 	/* order fullscreen layer */
 	for (c = clients; c; c = c->next)
 		if (c != pinned && c != raised && c->isfullscreen) {
 			XConfigureWindow(dpy, c->win, CWSibling|CWStackMode, &wc);
 			wc.sibling = c->win;
+			PROPADD(PropModePrepend, c, NetCliStack)
 		}
 }
 
@@ -1311,6 +1326,7 @@ setup(void)
 	netatom[NetWMWindowTypeDialog] = XInternAtom(
 		dpy, "_NET_WM_WINDOW_TYPE_DIALOG", False);
 	netatom[NetClientList] = XInternAtom(dpy, "_NET_CLIENT_LIST", False);
+	netatom[NetCliStack] = XInternAtom(dpy, "_NET_CLIENT_LIST_STACKING", False);
 	/* init cursors */
 	cursor[CurNormal] = drw_cur_create(drw, XC_left_ptr);
 	cursor[CurResize] = drw_cur_create(drw, XC_sizing);
@@ -1525,8 +1541,7 @@ unmanage(Client *c, int destroyed)
 	free(c);
 	XDeleteProperty(dpy, root, netatom[NetClientList]);
 	for (c = clients; c; c = c->next)
-		XChangeProperty(dpy, root, netatom[NetClientList],
-			XA_WINDOW, 32, PropModeAppend, (unsigned char *) &(c->win), 1);
+		PROPADD(PropModeAppend, c, NetClientList)
 	arrange();
 }
 
