@@ -1479,7 +1479,8 @@ togglefloating(const Arg *arg)
 {
 	if (!sel)
 		return;
-	if (sel->isfullscreen) setfullscreen(sel, 0);
+	if (sel->isfullscreen)
+		setfullscreen(sel, 0);
 	sel->isfloating = !sel->isfloating || sel->isfixed;
 	if (sel->isfloating) {
 		resize(sel, sel->fx, sel->fy,
@@ -1491,7 +1492,8 @@ togglefloating(const Arg *arg)
 void
 togglefullscreen(const Arg *arg)
 {
-	if (sel) setfullscreen(sel, !sel->isfullscreen);
+	if (sel)
+		setfullscreen(sel, !sel->isfullscreen);
 }
 
 void
