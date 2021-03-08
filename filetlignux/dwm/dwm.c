@@ -74,7 +74,7 @@
 #define PROPADD(P, C, A) {XChangeProperty(dpy, root, netatom[A], XA_WINDOW,\
                          32, P, (unsigned char *) &(C->win), 1);}
 /* enums */
-enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
+enum { CurNormal, CurResize, CurLast }; /* cursor */
 enum { SchemeNorm, SchemeSel }; /* color schemes */
 enum { NetSupported, NetWMName, NetWMState, NetWMCheck, /* EWMH atoms */
        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
@@ -712,8 +712,7 @@ grabresize(const Arg *arg) {
 	restack(c, CliRaise);
 	nc = oc = *c;
 	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
-		None, cursor[type == DragMove ? CurMove : CurResize]->cursor, CurrentTime)
-		!= GrabSuccess)
+		None, cursor[CurResize]->cursor, CurrentTime) != GrabSuccess)
 		return;
 	XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
 
@@ -1329,7 +1328,6 @@ setup(void)
 	/* init cursors */
 	cursor[CurNormal] = drw_cur_create(drw, XC_left_ptr);
 	cursor[CurResize] = drw_cur_create(drw, XC_sizing);
-	cursor[CurMove] = drw_cur_create(drw, XC_fleur);
 	/* init appearance */
 	scheme = ecalloc(LENGTH(colors), sizeof(Clr *));
 	for (i = 0; i < LENGTH(colors); i++)
