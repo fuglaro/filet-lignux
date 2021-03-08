@@ -71,10 +71,9 @@
                                  : (TAGS << I) | (TAGS >> (LENGTH(tags) - I)))
 #define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
 
-#define PROPADD(P, C, A) {XChangeProperty(dpy, root, netatom[A], XA_WINDOW,\
+#define PROPEDIT(P, C, A) {XChangeProperty(dpy, root, netatom[A], XA_WINDOW,\
                          32, P, (unsigned char *) &(C->win), 1);}
 /* enums */
-enum { CurNormal, CurResize, CurLast }; /* cursor */
 enum { SchemeNorm, SchemeSel }; /* color schemes */
 enum { NetSupported, NetWMName, NetWMState, NetWMCheck, /* EWMH atoms */
        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
@@ -225,13 +224,13 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 };
 static Atom wmatom[WMLast], netatom[NetLast];
 static int end;
-static Cur *cursor[CurLast];
 static Clr **scheme;
 static Display *dpy;
 static Drw *drw;
 static Client *clients;
 static Client *sel;
 static Window root, wmcheckwin;
+static Cursor curpoint, cursize;
 /* dummy variables */
 static int di;
 static unsigned long dl;
@@ -367,8 +366,8 @@ cleanup(void)
 	XUngrabKeyboard(dpy, CurrentTime);
 	XUnmapWindow(dpy, barwin);
 	XDestroyWindow(dpy, barwin);
-	for (i = 0; i < CurLast; i++)
-		drw_cur_free(drw, cursor[i]);
+	XFreeCursor(dpy, curpoint);
+	XFreeCursor(dpy, cursize);
 	for (i = 0; i < LENGTH(colors); i++)
 		free(scheme[i]);
 	XDestroyWindow(dpy, wmcheckwin);
@@ -566,8 +565,7 @@ focus(Client *c)
 		XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
 		if (!barfocus) {
 			XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime);
-			XChangeProperty(dpy, root, netatom[NetActiveWindow],
-				XA_WINDOW, 32, PropModeReplace, (unsigned char *) &(c->win), 1);
+			PROPEDIT(PropModeReplace, c, NetActiveWindow)
 			sendevent(c, wmatom[WMTakeFocus]);
 		}
 	} else {
@@ -712,7 +710,7 @@ grabresize(const Arg *arg) {
 	restack(c, CliRaise);
 	nc = oc = *c;
 	if (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
-		None, cursor[CurResize]->cursor, CurrentTime) != GrabSuccess)
+		None, cursize, CurrentTime) != GrabSuccess)
 		return;
 	XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
 
@@ -800,7 +798,7 @@ grabresizecheck(Client *c) {
 	|| (mask & (Button1Mask|Button2Mask|Button3Mask|Button4Mask|Button5Mask))
 	|| (!MOVEZONE(c, x, y) && !RESIZEZONE(c, x, y))
 	|| (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
-		None, cursor[CurResize]->cursor, CurrentTime) != GrabSuccess))
+		None, cursize, CurrentTime) != GrabSuccess))
 		return;
 
 	do {
@@ -936,7 +934,7 @@ manage(Window w, XWindowAttributes *wa)
 	XSelectInput(dpy, w, PropertyChangeMask|StructureNotifyMask);
 	attach(c);
 	restack(c, CliRaise);
-	PROPADD(PropModeAppend, c, NetClientList)
+	PROPEDIT(PropModeAppend, c, NetClientList)
 	/* some windows require this */
 	XMoveResizeWindow(dpy, c->win, c->x + 2 * sw, c->y, c->w, c->h);
 	setclientstate(c, NormalState);
@@ -1044,14 +1042,15 @@ rawmotion(XEvent *e)
 	   especially useful for apps that capture the keyboard. */
 	if (topbar ? ry <= mons->my : ry >= mons->my + mons->mh - 1
 		&& (rx >= mons->mx) && (rx <= mons->mx + mons->mw) && !barfocus) {
+		barfocus = 1;
 		XRaiseWindow(dpy, barwin);
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
-		barfocus = 1;
 	} else if (barfocus) {
 		barfocus = 0;
 		if (sel)
 			focus(sel);
+		restack(NULL, CliRefresh);
 	}
 
 	c = cw != lastcw ? wintoclient(cw) : c;
@@ -1127,16 +1126,15 @@ restack(Client *c, int mode)
 		attach(pinned);
 	}
 
-
 	XDeleteProperty(dpy, root, netatom[NetCliStack]);
 	if (barfocus) up[i++] = barwin;
 	if (pinned) {
 		up[i++] = pinned->win;
-		PROPADD(PropModePrepend, pinned, NetCliStack)
+		PROPEDIT(PropModePrepend, pinned, NetCliStack)
 	}
 	if (raised) {
 		up[i++] = raised->win;
-		PROPADD(PropModePrepend, raised, NetCliStack)
+		PROPEDIT(PropModePrepend, raised, NetCliStack)
 	}
 	if (!barfocus) up[i++] = barwin;
 	XRaiseWindow(dpy, up[0]);
@@ -1149,21 +1147,21 @@ restack(Client *c, int mode)
 		if (c != pinned && c != raised && c->isfloating && !c->isfullscreen) {
 			XConfigureWindow(dpy, c->win, CWSibling|CWStackMode, &wc);
 			wc.sibling = c->win;
-			PROPADD(PropModePrepend, c, NetCliStack)
+			PROPEDIT(PropModePrepend, c, NetCliStack)
 		}
 	/* order tiled layer */
 	for (c = clients; c; c = c->next)
 		if (c != pinned && c != raised && !c->isfloating) {
 			XConfigureWindow(dpy, c->win, CWSibling|CWStackMode, &wc);
 			wc.sibling = c->win;
-			PROPADD(PropModePrepend, c, NetCliStack)
+			PROPEDIT(PropModePrepend, c, NetCliStack)
 		}
 	/* order fullscreen layer */
 	for (c = clients; c; c = c->next)
 		if (c != pinned && c != raised && c->isfullscreen) {
 			XConfigureWindow(dpy, c->win, CWSibling|CWStackMode, &wc);
 			wc.sibling = c->win;
-			PROPADD(PropModePrepend, c, NetCliStack)
+			PROPEDIT(PropModePrepend, c, NetCliStack)
 		}
 }
 
@@ -1326,8 +1324,8 @@ setup(void)
 	netatom[NetClientList] = XInternAtom(dpy, "_NET_CLIENT_LIST", False);
 	netatom[NetCliStack] = XInternAtom(dpy, "_NET_CLIENT_LIST_STACKING", False);
 	/* init cursors */
-	cursor[CurNormal] = drw_cur_create(drw, XC_left_ptr);
-	cursor[CurResize] = drw_cur_create(drw, XC_sizing);
+	curpoint = XCreateFontCursor(dpy, XC_left_ptr);
+	cursize = XCreateFontCursor(dpy, XC_sizing);
 	/* init appearance */
 	scheme = ecalloc(LENGTH(colors), sizeof(Clr *));
 	for (i = 0; i < LENGTH(colors); i++)
@@ -1353,13 +1351,13 @@ setup(void)
 				.override_redirect = True,
 				.background_pixmap = ParentRelative,
 				.event_mask = ButtonPressMask|ExposureMask});
-		XDefineCursor(dpy, barwin, cursor[CurNormal]->cursor);
+		XDefineCursor(dpy, barwin, curpoint);
 		XMapRaised(dpy, barwin);
 		XSetClassHint(dpy, barwin, &(XClassHint){"dwm", "dwm"});
 		updatestatus();
 	}
 	/* select events */
-	wa.cursor = cursor[CurNormal]->cursor;
+	wa.cursor = curpoint;
 	wa.event_mask = SubstructureRedirectMask|SubstructureNotifyMask
 		|ButtonPressMask|StructureNotifyMask|PropertyChangeMask;
 	XChangeWindowAttributes(dpy, root, CWEventMask|CWCursor, &wa);
@@ -1538,7 +1536,7 @@ unmanage(Client *c, int destroyed)
 	free(c);
 	XDeleteProperty(dpy, root, netatom[NetClientList]);
 	for (c = clients; c; c = c->next)
-		PROPADD(PropModeAppend, c, NetClientList)
+		PROPEDIT(PropModeAppend, c, NetClientList)
 	arrange();
 }
 
