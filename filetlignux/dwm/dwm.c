@@ -797,7 +797,7 @@ grabresizecheck(Client *c) {
 	unsigned int mask;
 	XEvent ev;
 
-	if (c != sel || !MOUSEINF(dwin, x, y, mask)
+	if (!c || c != sel || !MOUSEINF(dwin, x, y, mask)
 	|| (mask & (Button1Mask|Button2Mask|Button3Mask|Button4Mask|Button5Mask))
 	|| (!MOVEZONE(c, x, y) && !RESIZEZONE(c, x, y))
 	|| (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
@@ -1037,7 +1037,7 @@ rawmotion(XEvent *e)
 	int rx, ry;
 	Window cw;
 	static Window lastcw = {0};
-	Client *c;
+	static Client *c = NULL;
 
 	if (!MOUSEINF(cw, rx, ry, dui)) return;
 
@@ -1055,16 +1055,15 @@ rawmotion(XEvent *e)
 			focus(sel);
 	}
 
-//TODO get rid of the lastcw thing.
-// Replace with using the sel->win and event's x,y. FAST!
-
-	/* watch for border edge locations for resizing */
-	if (cw != lastcw && (c = wintoclient(cw))) {
-		if (c != sel) focus(c);
-		grabresizecheck(c); /* seems harder to hit */
-	}
+	c = cw != lastcw ? wintoclient(cw) : c;
 	lastcw = cw;
+	/* focus follows mouse */
+	if (c && c != sel)
+		focus(c);
+	/* watch for border edge locations for resizing */
+	grabresizecheck(sel);
 }
+
 void
 resize(Client *c, int x, int y, int w, int h)
 {
