@@ -52,9 +52,12 @@
 #define LENGTH(X)               (sizeof X / sizeof X[0])
 #define MOUSEMASK               (BUTTONMASK|PointerMotionMask)
 #define MOUSEINF(W,X,Y,M) (XQueryPointer(dpy,root,&dwin,&W,&X,&Y,&di,&di,&M))
-#define MOVEZONE(C, X, Y)   (abs(C->x - X) <= C->bw || abs(C->y - Y) <= C->bw)
-#define RESIZEZONE(C, X, Y)     (abs(C->x + WIDTH(C) - X) <= C->bw ||\
-                                 abs(C->y + HEIGHT(C) - Y) <= C->bw)
+#define INZONE(C, X, Y)         (X >= C->x - C->bw && Y >= C->y - C->bw &&\
+               (X <= C->x + WIDTH(C) + C->bw && Y <= C->y + HEIGHT(C) + C->bw)
+#define MOVEZONE(C, X, Y)       (INZONE(C, X, Y) && abs(C->x - X) <= C->bw ||\
+                                abs(C->y - Y) <= C->bw)
+#define RESIZEZONE(C, X, Y)     (INZONE(C, X, Y) &&\
+     abs(C->x + WIDTH(C) - X) <= C->bw || abs(C->y + HEIGHT(C) - Y) <= C->bw)
 #define WINY(M)                 (&M == mons && topbar ? M.my + bh : M.my)
 #define WINH(M)                 (&M == mons ? M.mh - bh : M.mh)
 #define MONLEN                  (sizeof mons / sizeof mons[0])
