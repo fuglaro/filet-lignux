@@ -307,7 +307,7 @@ arrange(void)
 	focus(NULL);
 	showhide(clients);
 	tile();
-	restack(NULL, CliRefresh);
+	restack(sel, CliRaise);
 }
 
 void
@@ -549,11 +549,8 @@ expose(XEvent *e)
 void
 focus(Client *c)
 {
-	if (!c || !ISVISIBLE(c)){
-		if (sel)
-			for (c = sel; c && !ISVISIBLE(c); c = c->next);
-		if (!c) for (c = clients; c && !ISVISIBLE(c); c = c->next);
-	}
+	if ((!c || !ISVISIBLE(c)) && (!(c = sel) || !ISVISIBLE(sel)))
+		for (c = clients; c && !ISVISIBLE(c); c = c->next);
 	if (sel && sel != c) {
 		/* catch the Click-to-Raise that could be coming */
 		XGrabButton(dpy, AnyButton, AnyModifier, sel->win, False,
@@ -1145,9 +1142,9 @@ restack(Client *c, int mode)
 	wc.stack_mode = Below;
 	wc.sibling = up[i - 1];
 
-	/* order floating layer */
+	/* order floating/fullscreen layer */
 	for (c = clients; c; c = c->next)
-		if (c != pinned && c != raised && c->isfloating && !c->isfullscreen) {
+		if (c != pinned && c != raised && c->isfloating) {
 			XConfigureWindow(dpy, c->win, CWSibling|CWStackMode, &wc);
 			wc.sibling = c->win;
 			PROPEDIT(PropModePrepend, c, NetCliStack)
@@ -1155,13 +1152,6 @@ restack(Client *c, int mode)
 	/* order tiled layer */
 	for (c = clients; c; c = c->next)
 		if (c != pinned && c != raised && !c->isfloating) {
-			XConfigureWindow(dpy, c->win, CWSibling|CWStackMode, &wc);
-			wc.sibling = c->win;
-			PROPEDIT(PropModePrepend, c, NetCliStack)
-		}
-	/* order fullscreen layer */
-	for (c = clients; c; c = c->next)
-		if (c != pinned && c != raised && c->isfullscreen) {
 			XConfigureWindow(dpy, c->win, CWSibling|CWStackMode, &wc);
 			wc.sibling = c->win;
 			PROPEDIT(PropModePrepend, c, NetCliStack)
