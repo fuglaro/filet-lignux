@@ -43,39 +43,44 @@
 #include "drw.h"
 #include "util.h"
 
-/* macros */
-#define BUTTONMASK           (ButtonPressMask|ButtonReleaseMask)
-#define CLEANMASK(mask)      (mask & ~(numlockmask|LockMask)\
-                              & (ShiftMask|ControlMask|Mod1Mask|Mod2Mask\
-                                 |Mod3Mask|Mod4Mask|Mod5Mask))
-#define ISVISIBLE(C)            ((C->tags & tagset))
-#define LENGTH(X)               (sizeof X / sizeof X[0])
-#define MOUSEMASK               (BUTTONMASK|PointerMotionMask)
+/* basic macros */
+#define CLEANMASK(mask) (mask & ~(numlockmask|LockMask)\
+	& (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
+#define ISVISIBLE(C) ((C->tags & tagset))
+#define LENGTH(X) (sizeof X / sizeof X[0])
 #define MOUSEINF(W,X,Y,M) (XQueryPointer(dpy,root,&dwin,&W,&X,&Y,&di,&di,&M))
-#define INZONE(C, X, Y)         (X >= C->x - C->bw && Y >= C->y - C->bw &&\
-                X <= C->x + WIDTH(C) + C->bw && Y <= C->y + HEIGHT(C) + C->bw)
-#define MOVEZONE(C, X, Y)      (INZONE(C, X, Y) && (abs(C->x - X) <= C->bw ||\
-                                abs(C->y - Y) <= C->bw))
-#define RESIZEZONE(C, X, Y)     (INZONE(C, X, Y) &&\
-    (abs(C->x + WIDTH(C) - X) <= C->bw || abs(C->y + HEIGHT(C) - Y) <= C->bw))
-#define WINY(M)                 (&M == mons && topbar ? M.my + bh : M.my)
-#define WINH(M)                 (&M == mons ? M.mh - bh : M.mh)
-#define MONLEN                  (sizeof mons / sizeof mons[0])
-#define MONNULL(M)          (M.mx == 0 && M.my == 0 && M.mw == 0 && M.mh == 0)
-#define INMON(X, Y, M)          (X >= M.mx && X < M.mx + M.mw &&\
-                                 Y >= M.my && Y < M.my + M.mh)
-#define SETMON(M, R)            {M.mx = R.x; M.my = R.y;\
-                                 M.mw = R.width; M.mh = R.height;}
-#define WIDTH(X)                ((X)->w + 2 * (X)->bw)
-#define HEIGHT(X)               ((X)->h + 2 * (X)->bw)
-#define WINMON(C, M)           INMON(C->x + WIDTH(C)/2, C->y + HEIGHT(C)/2, M)
-#define TAGMASK                 ((1 << LENGTH(tags)) - 1)
-#define TAGSHIFT(TAGS, I) (I < 0 ? (TAGS >> -I) | (TAGS << (LENGTH(tags) + I))\
-                                 : (TAGS << I) | (TAGS >> (LENGTH(tags) - I)))
-#define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
-
+#define MOUSEMASK (ButtonPressMask|ButtonReleaseMask|PointerMotionMask)
 #define PROPEDIT(P, C, A) {XChangeProperty(dpy, root, netatom[A], XA_WINDOW,\
-                         32, P, (unsigned char *) &(C->win), 1);}
+	32, P, (unsigned char *) &(C->win), 1);}
+#define TEXTW(X) (drw_fontset_getwidth(drw, (X)) + lrpad)
+
+/* edge dragging macros*/
+#define INZONE(C, X, Y) (X >= C->x - C->bw && Y >= C->y - C->bw\
+	&& X <= C->x + WIDTH(C) + C->bw && Y <= C->y + HEIGHT(C) + C->bw)
+#define MOVEZONE(C, X, Y) (INZONE(C, X, Y)\
+	&& (abs(C->x - X) <= C->bw || abs(C->y - Y) <= C->bw))
+#define RESIZEZONE(C, X, Y) (INZONE(C, X, Y)\
+	&& (abs(C->x + WIDTH(C) - X) <= C->bw || abs(C->y + HEIGHT(C) - Y) <= C->bw))
+
+/* monitor macros */
+#define INMON(X, Y, M)\
+	(X >= M.mx && X < M.mx + M.mw && Y >= M.my && Y < M.my + M.mh)
+#define MONLEN (sizeof mons / sizeof mons[0])
+#define MONNULL(M) (M.mx == 0 && M.my == 0 && M.mw == 0 && M.mh == 0)
+#define SETMON(M, R) {M.mx = R.x; M.my = R.y; M.mw = R.width; M.mh = R.height;}
+#define WINH(M) (&M == mons ? M.mh - bh : M.mh)
+#define WINY(M) (&M == mons && topbar ? M.my + bh : M.my)
+#define WINMON(C, M) INMON(C->x + WIDTH(C)/2, C->y + HEIGHT(C)/2, M)
+
+/* window macros */
+#define HEIGHT(X) ((X)->h + 2 * (X)->bw)
+#define WIDTH(X) ((X)->w + 2 * (X)->bw)
+
+/* virtual desktop macros */
+#define TAGMASK ((1 << LENGTH(tags)) - 1)
+#define TAGSHIFT(TAGS, I) (I < 0 ? (TAGS >> -I) | (TAGS << (LENGTH(tags) + I))\
+	: (TAGS << I) | (TAGS >> (LENGTH(tags) - I)))
+
 /* enums */
 enum { SchemeNorm, SchemeSel }; /* color schemes */
 enum { NetSupported, NetWMName, NetWMState, NetWMCheck, /* EWMH atoms */
@@ -554,7 +559,7 @@ focus(Client *c)
 	if (sel && sel != c) {
 		/* catch the Click-to-Raise that could be coming */
 		XGrabButton(dpy, AnyButton, AnyModifier, sel->win, False,
-			BUTTONMASK, GrabModeSync, GrabModeSync, None, None);
+			ButtonPressMask, GrabModeSync, GrabModeSync, None, None);
 		/* unfocus */
 		XSetWindowBorder(dpy, sel->win, scheme[SchemeNorm][ColBorder].pixel);
 	}
@@ -1035,7 +1040,8 @@ rawmotion(XEvent *e)
 	static Window lastcw = {0};
 	static Client *c = NULL;
 
-	if (!MOUSEINF(cw, rx, ry, dui)) return;
+	if (!MOUSEINF(cw, rx, ry, dui))
+		return;
 
 	/* top bar raise when mouse hits the screen edge.
 	   especially useful for apps that capture the keyboard. */
