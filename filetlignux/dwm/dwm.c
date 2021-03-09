@@ -70,7 +70,7 @@
 #define SETMON(M, R) {M.mx = R.x; M.my = R.y; M.mw = R.width; M.mh = R.height;}
 #define WINH(M) (&M == mons ? M.mh - bh : M.mh)
 #define WINY(M) (&M == mons && topbar ? M.my + bh : M.my)
-#define WINMON(C, M) INMON(C->x + WIDTH(C)/2, C->y + HEIGHT(C)/2, M)
+#define ONMON(C, M) INMON(C->x + WIDTH(C)/2, C->y + HEIGHT(C)/2, M)
 
 /* window macros */
 #define HEIGHT(X) ((X)->h + 2 * (X)->bw)
@@ -1448,14 +1448,14 @@ tile(void)
 
 	/* find the number of clients in each monitor */
 	for (c = nexttiled(clients); c; c = nexttiled(c->next)) {
-		for (m = LENGTH(mons)-1; m > 0 && !WINMON(c, mons[m]); m--);
+		for (m = LENGTH(mons)-1; m > 0 && !ONMON(c, mons[m]); m--);
 		nm[m]++;
 	}
 
 	/* tile windows into the relevant monitors. */
 	for (c = nexttiled(clients); c; c = nexttiled(c->next), i[m]++) {
 		/* find the monitor placement again */
-		for (m = LENGTH(mons)-1; m > 0 && !WINMON(c, mons[m]); m--);
+		for (m = LENGTH(mons)-1; m > 0 && !ONMON(c, mons[m]); m--);
 		/* tile the client within the relevant monitor */
 		mw = nm[m] > nmain[m] ? mons[m].mw * mfact[m] : mons[m].mw;
 		if (i[m] < nmain[m]) {
