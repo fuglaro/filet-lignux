@@ -1058,7 +1058,8 @@ rawmotion(XEvent *e)
 	if (c && c != sel)
 		focus(c);
 	/* watch for border edge locations for resizing */
-	grabresizecheck(sel);
+	if (cw != barwin)
+		grabresizecheck(sel);
 }
 
 void
