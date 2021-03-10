@@ -52,7 +52,8 @@
 #define MOUSEMASK (ButtonPressMask|ButtonReleaseMask|PointerMotionMask)
 #define PROPEDIT(P, C, A) {XChangeProperty(dpy, root, netatom[A], XA_WINDOW,\
 	32, P, (unsigned char *) &(C->win), 1);}
-#define TEXTW(X) (drw_fontset_getwidth(drw, (X)) + lrpad)
+#define TEXTPAD (drw->fonts->h) /* sum of left and right padding of text */
+#define TEXTW(X) (drw_fontset_getwidth(drw, (X)) + TEXTPAD)
 
 /* edge dragging macros*/
 #define INZONE(C, X, Y) (X >= C->x - C->bw && Y >= C->y - C->bw\
@@ -63,13 +64,15 @@
 	&& (abs(C->x + WIDTH(C) - X) <= C->bw || abs(C->y + HEIGHT(C) - Y) <= C->bw))
 
 /* monitor macros */
+#define BARH (drw->fonts->h + 2)
+#define BARY (topbar ? mons->my : mons->my + WINH(mons[0]))
 #define INMON(X, Y, M)\
 	(X >= M.mx && X < M.mx + M.mw && Y >= M.my && Y < M.my + M.mh)
 #define MONLEN (sizeof mons / sizeof mons[0])
 #define MONNULL(M) (M.mx == 0 && M.my == 0 && M.mw == 0 && M.mh == 0)
 #define SETMON(M, R) {M.mx = R.x; M.my = R.y; M.mw = R.width; M.mh = R.height;}
-#define WINH(M) (&M == mons ? M.mh - bh : M.mh)
-#define WINY(M) (&M == mons && topbar ? M.my + bh : M.my)
+#define WINH(M) (&M == mons ? M.mh - BARH : M.mh)
+#define WINY(M) (&M == mons && topbar ? M.my + BARH : M.my)
 #define ONMON(C, M) INMON(C->x + WIDTH(C)/2, C->y + HEIGHT(C)/2, M)
 
 /* window macros */
@@ -114,7 +117,7 @@ struct Client {
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
 	int bw, fbw, oldbw;
 	unsigned int tags;
-	int isfixed, isfloating, isurgent, fstate, isfullscreen;
+	int isfloating, isurgent, fstate, isfullscreen;
 	Client *next;
 	Window win;
 	Time zenping;
@@ -209,8 +212,6 @@ static int screen;
 static int sw, sh;           /* X display screen geometry width, height */
 static Window barwin;
 static int barfocus;
-static int bh, blw, by, vw;  /* bar geometry */
-static int lrpad;            /* sum of left and right padding for text */
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask;
 static unsigned int tagset = 1;
@@ -268,10 +269,10 @@ applysizehints(Client *c, int *x, int *y, int *w, int *h)
 		if (*y + *h + 2 * c->bw < 0)
 			*y = 0;
 	}
-	if (*h < bh)
-		*h = bh;
-	if (*w < bh)
-		*w = bh;
+	if (*h < BARH)
+		*h = BARH;
+	if (*w < BARH)
+		*w = BARH;
 	if (resizehints || c->isfloating) {
 		/* see last two sentences in ICCCM 4.1.2.3 */
 		baseismin = c->basew == c->minw && c->baseh == c->minh;
@@ -325,23 +326,24 @@ attach(Client *c)
 void
 buttonpress(XEvent *e)
 {
-	unsigned int i = 0, x = vw, click = ClkWinTitle;
+	int i, x = mons->mw, click = ClkWinTitle;
 	Client *c;
 	Arg arg = {0};
 	XButtonPressedEvent *ev = &e->xbutton;
 
 	if (ev->window == barwin) {
-		for (;ev->x >= vw && ev->x >= (x+=TEXTW(tags[i])) && ++i < LENGTH(tags););
-		if (ev->x >= vw && i < LENGTH(tags)) {
+		for (i = LENGTH(tags) - 1; i >= 0 && ev->x < (x -= TEXTW(tags[i])); i--);
+		if (i >= 0) {
 			click = ClkTagBar;
 			arg.ui = 1 << i;
-		} else if (ev->x > vw - (int)TEXTW(stext))
+		} else if (ev->x > x - TEXTW(stext))
 			click = ClkStatus;
-		else if (ev->x < blw)
+		else if (ev->x < TEXTW(lsymbol))
 			click = ClkLauncher;
 		for (i = 0; i < LENGTH(buttons); i++)
 			if (click == buttons[i].click && buttons[i].button == ev->button)
 				buttons[i].func(arg.ui ? &arg : &buttons[i].arg);
+
 	} else if ((c = wintoclient(ev->window))) {
 		XAllowEvents(dpy, ReplayPointer, CurrentTime);
 		XUngrabButton(dpy, AnyButton, AnyModifier, c->win);
@@ -485,54 +487,44 @@ detach(Client *c)
 void
 drawbar(int zen)
 {
-	int x, w, tw = 0;
+	int i, x, w;
 	int boxs = drw->fonts->h / 9;
 	int boxw = drw->fonts->h / 6 + 2;
-	unsigned int i, occ = 0, urg = 0;
+	unsigned int occ = 0, urg = 0;
 	Client *c;
 
-	vw = mons->mw;
-	for (i = 0; i < LENGTH(tags); i++) vw -= TEXTW(tags[i]);
-
-	/* draw status first so it can be overdrawn by tags later */
-	drw_setscheme(drw, scheme[SchemeNorm]);
-	tw = TEXTW(stext) - lrpad + 2; /* 2px right padding */
-	drw_text(drw, vw - tw, 0, tw, bh, 0, stext, 0);
-
+	/* get urgency and occupied status for each tag */
 	for (c = clients; c; c = c->next) {
 		occ |= c->tags;
-		if (c->isurgent)
-			urg |= c->tags;
+		urg |= c->tags * c->isurgent;
 	}
-	x = vw;
-	for (i = 0; i < LENGTH(tags); i++) {
-		w = TEXTW(tags[i]);
+
+	/* draw launcher button (left align) */
+	drw_setscheme(drw, scheme[SchemeSel]);
+	drw_text(drw, 0, 0, (x = TEXTW(lsymbol)), BARH, TEXTPAD / 2, lsymbol, 0);
+
+	/* draw window title (left align) */
+	drw_setscheme(drw, scheme[SchemeNorm]);
+	drw_text(drw, x, 0, mons->mw - x, BARH, TEXTPAD / 2,
+		sel ? (zen ? sel->zenname : sel->name) : "", 0);
+
+	/* draw tags (right align) */
+	x = mons->mw;
+	for (i = LENGTH(tags) - 1; i >= 0; i--) {
+		x -= (w = TEXTW(tags[i]));
 		drw_setscheme(drw, scheme[tagset & 1 << i ? SchemeSel : SchemeNorm]);
-		drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
+		drw_text(drw, x, 0, w, BARH, TEXTPAD / 2, tags[i], urg & 1 << i);
 		if (occ & 1 << i)
 			drw_rect(drw, x + boxs, boxs, boxw, boxw,
-				sel && sel->tags & 1 << i,
-				urg & 1 << i);
-		x += w;
+				sel && sel->tags & 1 << i, urg & 1 << i);
 	}
 
-	x = 0;
-	w = blw = TEXTW(lsymbol);
-	drw_setscheme(drw, scheme[SchemeSel]);
-	x = drw_text(drw, x, 0, w, bh, lrpad / 2, lsymbol, 0);
+	/* draw status (right align) */
+	drw_setscheme(drw, scheme[SchemeNorm]);
+	drw_text(drw, x - TEXTW(stext), 0, TEXTW(stext), BARH, 0, stext, 0);
 
-	if ((w = vw - x - tw) > bh) {
-		if (sel) {
-			drw_setscheme(drw, scheme[SchemeNorm]);
-			drw_text(drw, x, 0, w, bh, lrpad / 2, zen ? sel->zenname : sel->name, 0);
-			if (sel->isfloating)
-				drw_rect(drw, x + boxs, boxs, boxw, boxw, sel->isfixed, 0);
-		} else {
-			drw_setscheme(drw, scheme[SchemeNorm]);
-			drw_rect(drw, x, 0, w, bh, 1, 1);
-		}
-	}
-	drw_map(drw, barwin, 0, 0, mons->mw, bh);
+	/* map to display */
+	drw_map(drw, barwin, 0, 0, mons->mw, BARH);
 }
 
 void
@@ -925,8 +917,8 @@ manage(Window w, XWindowAttributes *wa)
 	c->x = c->fx = MAX(c->x, mons[m].mx);
 	/* only fix client y-offset, if the client center might cover the bar */
 	c->y = c->fy =
-		MAX(c->y, ((by == mons->my) && (c->x + (c->w / 2) >= mons->mx)
-			&& (c->x + (c->w / 2) < mons->mx + mons->mw)) ? bh : mons->my);
+		MAX(c->y, ((BARY == mons->my) && (c->x + (c->w / 2) >= mons->mx)
+			&& (c->x + (c->w / 2) < mons->mx + mons->mw)) ? BARH : mons->my);
 	c->bw = borderpx;
 
 	wc.border_width = c->bw;
@@ -1260,7 +1252,7 @@ setfullscreen(Client *c, int fullscreen)
 		w = mons[m2].mx - mons[m1].mx + mons[m2].mw;
 		h = mons[m2].my - mons[m1].my + mons[m2].mh;
 		resizeclient(c, mons[m1].mx, mons[m1].my, w, h);
-		restack(c, CliRaise);
+		restack(c, CliZoom);
 
 	} else if (!fullscreen && c->isfullscreen){
 		/* change back to original floating parameters */
@@ -1294,7 +1286,6 @@ setup(void)
 	drw = drw_create(dpy, screen, root, sw, sh);
 	if (!drw_fontset_create(drw, fonts, LENGTH(fonts)))
 		die("no fonts could be loaded.\n");
-	lrpad = drw->fonts->h;
 	/* init monitor layout */
 	if (MONNULL(mons[0])) {
 		updatemonitors(NULL);
@@ -1341,20 +1332,17 @@ setup(void)
 	XChangeProperty(dpy, root, netatom[NetSupported], XA_ATOM, 32,
 		PropModeReplace, (unsigned char *) netatom, NetLast);
 	XDeleteProperty(dpy, root, netatom[NetClientList]);
-	/* init bars */ {
-	bh = drw->fonts->h + 2;
-	by = topbar ? mons->my : mons->my + WINH(mons[0]);
-		barwin = XCreateWindow(dpy, root, mons->mx, by, mons->mw, bh, 0,
-			DefaultDepth(dpy, screen), CopyFromParent, DefaultVisual(dpy, screen),
-			CWOverrideRedirect|CWBackPixmap|CWEventMask, &(XSetWindowAttributes){
-				.override_redirect = True,
-				.background_pixmap = ParentRelative,
-				.event_mask = ButtonPressMask|ExposureMask});
-		XDefineCursor(dpy, barwin, curpoint);
-		XMapRaised(dpy, barwin);
-		XSetClassHint(dpy, barwin, &(XClassHint){"dwm", "dwm"});
-		updatestatus();
-	}
+	/* init bars */
+	barwin = XCreateWindow(dpy, root, mons->mx, BARY, mons->mw, BARH, 0,
+		DefaultDepth(dpy, screen), CopyFromParent, DefaultVisual(dpy, screen),
+		CWOverrideRedirect|CWBackPixmap|CWEventMask, &(XSetWindowAttributes){
+			.override_redirect = True,
+			.background_pixmap = ParentRelative,
+			.event_mask = ButtonPressMask|ExposureMask});
+	XDefineCursor(dpy, barwin, curpoint);
+	XMapRaised(dpy, barwin);
+	XSetClassHint(dpy, barwin, &(XClassHint){"dwm", "dwm"});
+	updatestatus();
 	/* select events */
 	wa.cursor = curpoint;
 	wa.event_mask = SubstructureRedirectMask|SubstructureNotifyMask
@@ -1480,11 +1468,8 @@ togglefloating(const Arg *arg)
 		return;
 	if (sel->isfullscreen)
 		setfullscreen(sel, 0);
-	sel->isfloating = !sel->isfloating || sel->isfixed;
-	if (sel->isfloating) {
-		resize(sel, sel->fx, sel->fy,
-			sel->fw, sel->fh);
-	}
+	if ((sel->isfloating = !sel->isfloating))
+		resize(sel, sel->fx, sel->fy, sel->fw, sel->fh);
 	arrange();
 }
 
@@ -1614,7 +1599,6 @@ updatesizehints(Client *c)
 		c->maxa = (float)size.max_aspect.x / size.max_aspect.y;
 	} else
 		c->maxa = c->mina = 0.0;
-	c->isfixed = (c->maxw && c->maxh && c->maxw == c->minw && c->maxh == c->minh);
 }
 
 void
