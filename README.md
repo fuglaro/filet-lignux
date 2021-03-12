@@ -37,3 +37,4 @@ https://github.com/tmux/tmux
 https://www.texturex.com/fractal-textures/fractal-design-picture-wallpaper-stock-art-image-definition-free-neuron-chaos-fractal-fracture-broken-synapse-texture/
 https://gist.github.com/palopezv/efd34059af6126ad970940bcc6a90f2e
 https://keithp.com/blogs/Cursor_tracking/
+https://www.jetbrains.com/lp/mono/

@@ -19,6 +19,12 @@
 
 #include <X11/XF86keysym.h>
 
+#define SELBLUE "#335577"
+#define SELRED "#dd4422"
+#define FOREGREY "#dddddd"
+#define MIDGREY "#555555"
+#define BACKGREY "#111111"
+
 /* appearance */
 static const unsigned int borderpx  = 2; /* border pixel of windows */
 static const unsigned int snap      = 8; /* snap pixel */
@@ -27,19 +33,10 @@ static const Time zenmode           = 3; /* if set, delays showing rapid
                                             sequences of client triggered
                                             window title changes until the
                                             next natural refresh. */
-static const char *fonts[]          = { "monospace:bold:size=4" };
+static const char font[]            = "monospace:bold:size=4";
 static const char dmenufont[]       = "monospace:size=8";
-static const char col_gray1[]       = "#111111";
-static const char col_gray2[]       = "#555555";
-static const char col_gray3[]       = "#dddddd";
-static const char col_gray4[]       = "#ffffff";
-static const char col_cyan[]        = "#335577";
-static const char col_red[]         = "#dd4422";
-static const char *colors[][3]      = {
-	/*               fg         bg         border   */
-	[SchemeNorm] = { col_gray3, col_gray1, col_gray2 },
-	[SchemeSel]  = { col_gray4, col_cyan,  col_red  },
-};
+                             /* fg        bg       highlight border sel-border */
+static const char *colors[] = { FOREGREY, BACKGREY, SELBLUE, MIDGREY, SELRED };
 
 /* tagging */
 static const char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
@@ -71,8 +68,8 @@ static const char lsymbol[] = ">";
 
 /* commands */
 static const char *dmenucmd[] = { "dmenu_run", "-p", ">", "-m", "0", "-i",
-	"-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan,
-	"-sf", col_gray4, NULL };
+	"-fn", dmenufont, "-nb", BACKGREY, "-nf", FOREGREY, "-sb", SELBLUE,
+	"-sf", FOREGREY, NULL };
 static const char *termcmd[] = { "st", NULL };
 static const char *lockcmd[] = { "slock", NULL };
 static const char *upvol[]   = { "volumeup", NULL };

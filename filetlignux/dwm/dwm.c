@@ -40,10 +40,9 @@
 #include <X11/Xutil.h>
 #include <X11/Xft/Xft.h>
 
-#include "drw.h"
-#include "util.h"
-
 /* basic macros */
+#define MAX(A, B) ((A) > (B) ? (A) : (B))
+#define MIN(A, B) ((A) < (B) ? (A) : (B))
 #define CLEANMASK(mask) (mask & ~(numlockmask|LockMask)\
 	& (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
 #define ISVISIBLE(C) ((C->tags & tagset))
@@ -52,8 +51,8 @@
 #define MOUSEMASK (ButtonPressMask|ButtonReleaseMask|PointerMotionMask)
 #define PROPEDIT(P, C, A) {XChangeProperty(dpy, root, netatom[A], XA_WINDOW,\
 	32, P, (unsigned char *) &(C->win), 1);}
-#define TEXTPAD (drw->fonts->h) /* sum of left and right padding of text */
-#define TEXTW(X) (drw_fontset_getwidth(drw, (X)) + TEXTPAD)
+#define TEXTPAD (xfont->ascent + xfont->descent) /* side padding of text */
+#define TEXTW(X) (drawgettextwidth(X) + TEXTPAD)
 
 /* edge dragging macros*/
 #define INZONE(C, X, Y) (X >= C->x - C->bw && Y >= C->y - C->bw\
@@ -64,7 +63,7 @@
 	&& (abs(C->x + WIDTH(C) - X) <= C->bw || abs(C->y + HEIGHT(C) - Y) <= C->bw))
 
 /* monitor macros */
-#define BARH (drw->fonts->h + 2)
+#define BARH (TEXTPAD + 2)
 #define BARY (topbar ? mons->my : mons->my + WINH(mons[0]))
 #define INMON(X, Y, M)\
 	(X >= M.mx && X < M.mx + M.mw && Y >= M.my && Y < M.my + M.mh)
@@ -85,7 +84,7 @@
 	: (TAGS << I) | (TAGS >> (LENGTH(tags) - I)))
 
 /* enums */
-enum { SchemeNorm, SchemeSel }; /* color schemes */
+enum { fg, bg, mark, bdr, selbdr }; /* colors */
 enum { NetSupported, NetWMName, NetWMState, NetWMCheck, /* EWMH atoms */
        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
        NetWMWindowTypeDialog, NetClientList, NetCliStack, NetLast };
@@ -140,7 +139,6 @@ static int applysizehints(Client *c, int *x, int *y, int *w, int *h);
 static void arrange(void);
 static void attach(Client *c);
 static void buttonpress(XEvent *e);
-static void checkotherwm(void);
 static void cleanup(void);
 static void clientmessage(XEvent *e);
 static void configure(Client *c);
@@ -148,6 +146,10 @@ static void configurerequest(XEvent *e);
 static void destroynotify(XEvent *e);
 static void detach(Client *c);
 static void drawbar(int zen);
+static int drawgettextwidth(const char *text);
+static void drawtext(int x, int y, int w, int h, const char *text,
+	const XftColor *fg, const XftColor *bg);
+static void die(const char *msg);
 static void expose(XEvent *e);
 static void exthandler(XEvent *ev);
 static void focus(Client *c);
@@ -203,7 +205,6 @@ static void viewtagshift(const Arg *arg);
 static Client *wintoclient(Window w);
 static int xerror(Display *dpy, XErrorEvent *ee);
 static int xerrordummy(Display *dpy, XErrorEvent *ee);
-static int xerrorstart(Display *dpy, XErrorEvent *ee);
 static void zoom(const Arg *arg);
 
 /* variables */
@@ -228,13 +229,14 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 	[MapRequest] = maprequest,
 	[PropertyNotify] = propertynotify,
 	[UnmapNotify] = unmapnotify,
-	[XI_RawMotion] = rawmotion,
 };
+static int randroutputchange;
 static Atom wmatom[WMLast], netatom[NetLast];
 static int end;
-static Clr **scheme;
 static Display *dpy;
-static Drw *drw;
+static Drawable drawable;
+static XftDraw *drawablexft;
+static GC gc;
 static Client *clients;
 static Client *sel;
 static Window root, wmcheckwin;
@@ -244,10 +246,13 @@ static int di;
 static unsigned long dl;
 static unsigned int dui;
 static Window dwin;
+static XftFont *xfont;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
 
+/* variables dependent on configuration */
+static XftColor cols[LENGTH(colors)];
 /* compile-time check if all tags fit into an unsigned int bit array. */
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
 
@@ -353,21 +358,8 @@ buttonpress(XEvent *e)
 }
 
 void
-checkotherwm(void)
-{
-	xerrorxlib = XSetErrorHandler(xerrorstart);
-	/* this causes an error if some other window manager is running */
-	XSelectInput(dpy, DefaultRootWindow(dpy), SubstructureRedirectMask);
-	XSync(dpy, False);
-	XSetErrorHandler(xerror);
-	XSync(dpy, False);
-}
-
-void
 cleanup(void)
 {
-	size_t i;
-
 	view(&(Arg){.ui = ~0});
 	while (clients)
 		unmanage(clients, 0);
@@ -377,10 +369,11 @@ cleanup(void)
 	XDestroyWindow(dpy, barwin);
 	XFreeCursor(dpy, curpoint);
 	XFreeCursor(dpy, cursize);
-	for (i = 0; i < LENGTH(colors); i++)
-		free(scheme[i]);
 	XDestroyWindow(dpy, wmcheckwin);
-	drw_free(drw);
+	XftFontClose(dpy, xfont);
+	XFreePixmap(dpy, drawable);
+	XFreeGC(dpy, gc);
+	XftDrawDestroy(drawablexft);
 	XSync(dpy, False);
 	XSetInputFocus(dpy, PointerRoot, RevertToPointerRoot, CurrentTime);
 	XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
@@ -485,11 +478,17 @@ detach(Client *c)
 }
 
 void
+die(const char *msg) {
+	fputs(msg, stderr);
+	exit(1);
+}
+
+void
 drawbar(int zen)
 {
 	int i, x, w;
-	int boxs = drw->fonts->h / 9;
-	int boxw = drw->fonts->h / 6 + 2;
+	int boxs = TEXTPAD / 9;
+	int boxw = TEXTPAD / 6 + 2;
 	unsigned int occ = 0, urg = 0;
 	Client *c;
 
@@ -500,38 +499,59 @@ drawbar(int zen)
 	}
 
 	/* draw launcher button (left align) */
-	drw_setscheme(drw, scheme[SchemeSel]);
-	drw_text(drw, 0, 0, (x = TEXTW(lsymbol)), BARH, TEXTPAD / 2, lsymbol, 0);
+	drawtext(0, 0, (x = TEXTW(lsymbol)), BARH, lsymbol, &cols[fg], &cols[mark]);
 
 	/* draw window title (left align) */
-	drw_setscheme(drw, scheme[SchemeNorm]);
-	drw_text(drw, x, 0, mons->mw - x, BARH, TEXTPAD / 2,
-		sel ? (zen ? sel->zenname : sel->name) : "", 0);
+	drawtext(x, 0, mons->mw - x, BARH,
+		sel ? (zen ? sel->zenname : sel->name) : "", &cols[fg], &cols[bg]);
 
 	/* draw tags (right align) */
 	x = mons->mw;
 	for (i = LENGTH(tags) - 1; i >= 0; i--) {
 		x -= (w = TEXTW(tags[i]));
-		drw_setscheme(drw, scheme[tagset & 1 << i ? SchemeSel : SchemeNorm]);
-		drw_text(drw, x, 0, w, BARH, TEXTPAD / 2, tags[i], urg & 1 << i);
-		if (occ & 1 << i)
-			drw_rect(drw, x + boxs, boxs, boxw, boxw,
-				sel && sel->tags & 1 << i, urg & 1 << i);
+		drawtext(x, 0, w, BARH, tags[i], &cols[urg & 1 << i ? bg : fg],
+			&cols[urg & 1 << i ? fg : (tagset & 1 << i ? mark : bg)]);
+		if (occ & 1 << i) {
+			XSetForeground(dpy, gc, cols[fg].pixel);
+			XFillRectangle(dpy, drawable, gc, x + boxs, boxs, boxw, boxw);
+		}
 	}
 
 	/* draw status (right align) */
-	drw_setscheme(drw, scheme[SchemeNorm]);
-	drw_text(drw, x - TEXTW(stext), 0, TEXTW(stext), BARH, 0, stext, 0);
+	w = TEXTW(stext);
+	drawtext(x - w, 0, w, BARH, stext, &cols[fg], &cols[bg]);
 
-	/* map to display */
-	drw_map(drw, barwin, 0, 0, mons->mw, BARH);
+	/* display composited bar */
+	XCopyArea(dpy, drawable, barwin, gc, 0, 0, mons->mw, BARH, 0, 0);
+}
+
+int
+drawgettextwidth(const char *text)
+{
+	XGlyphInfo ext;
+	XftTextExtentsUtf8(dpy, xfont, (XftChar8*)text, strlen(text), &ext);
+	return ext.xOff;
+}
+
+void
+drawtext(int x, int y, int w, int h, const char *text, const XftColor *fg,
+	const XftColor *bg)
+{
+	int ty = y + (h - (xfont->ascent + xfont->descent)) / 2 + xfont->ascent;
+
+	XSetForeground(dpy, gc, bg->pixel);
+	XFillRectangle(dpy, drawable, gc, x, y, w, h);
+	XftDrawStringUtf8(drawablexft, fg, xfont, x + (TEXTPAD / 2), ty,
+		(XftChar8 *)text, strlen(text));
 }
 
 void
 exthandler(XEvent *ev)
 {
-	if (handler[ev->xcookie.evtype])
-		handler[ev->xcookie.evtype](ev); /* call handler */
+	if (ev->xcookie.evtype == XI_RawMotion)
+		rawmotion(ev);
+	else if (ev->xcookie.evtype == randroutputchange)
+		updatemonitors(ev);
 }
 
 void
@@ -553,12 +573,12 @@ focus(Client *c)
 		XGrabButton(dpy, AnyButton, AnyModifier, sel->win, False,
 			ButtonPressMask, GrabModeSync, GrabModeSync, None, None);
 		/* unfocus */
-		XSetWindowBorder(dpy, sel->win, scheme[SchemeNorm][ColBorder].pixel);
+		XSetWindowBorder(dpy, sel->win, cols[bdr].pixel);
 	}
 	if (c) {
 		if (c->isurgent)
 			seturgent(c, 0);
-		XSetWindowBorder(dpy, c->win, scheme[SchemeSel][ColBorder].pixel);
+		XSetWindowBorder(dpy, c->win, cols[selbdr].pixel);
 		if (!barfocus) {
 			XSetInputFocus(dpy, c->win, RevertToPointerRoot, CurrentTime);
 			PROPEDIT(PropModeReplace, c, NetActiveWindow)
@@ -790,7 +810,7 @@ grabresizecheck(Client *c) {
 	unsigned int mask;
 	XEvent ev;
 
-	if (!c || c != sel || !MOUSEINF(dwin, x, y, mask)
+	if (!c || c != sel || c->isfullscreen || !MOUSEINF(dwin, x, y, mask)
 	|| (mask & (Button1Mask|Button2Mask|Button3Mask|Button4Mask|Button5Mask))
 	|| (!MOVEZONE(c, x, y) && !RESIZEZONE(c, x, y))
 	|| (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
@@ -887,7 +907,8 @@ manage(Window w, XWindowAttributes *wa)
 	Window trans = None;
 	XWindowChanges wc;
 
-	c = ecalloc(1, sizeof(Client));
+	if (!(c = calloc(1, sizeof(Client))))
+		die("calloc failed.\n");
 	c->win = w;
 	c->zenping = 0;
 	/* geometry */
@@ -1278,20 +1299,25 @@ setup(void)
 	/* clean up any zombies immediately */
 	sigchld(0);
 
-	/* init screen */
+	/* init screen and display */
+	XSetErrorHandler(xerror);
 	screen = DefaultScreen(dpy);
 	sw = DisplayWidth(dpy, screen);
 	sh = DisplayHeight(dpy, screen);
 	root = RootWindow(dpy, screen);
-	drw = drw_create(dpy, screen, root, sw, sh);
-	if (!drw_fontset_create(drw, fonts, LENGTH(fonts)))
-		die("no fonts could be loaded.\n");
+	drawable = XCreatePixmap(dpy, root, sw, sh, DefaultDepth(dpy, screen));
+	drawablexft = XftDrawCreate(dpy, drawable, DefaultVisual(dpy, screen),
+		DefaultColormap(dpy, screen));
+	gc = XCreateGC(dpy, root, 0, NULL);
+	XSetLineAttributes(dpy, gc, 1, LineSolid, CapButt, JoinMiter);
+	if (!(xfont = XftFontOpenName(dpy, screen, font)))
+		die("font couldn't be loaded.\n");
 	/* init monitor layout */
 	if (MONNULL(mons[0])) {
 		updatemonitors(NULL);
 		/* select xrandr events (if monitor layout isn't hard configured) */
 		if (XRRQueryExtension(dpy, &xre, &di)) {
-			handler[xre + RRNotify_OutputChange] = updatemonitors,
+			randroutputchange = xre + RRNotify_OutputChange;
 			XRRSelectInput(dpy, root, RROutputChangeNotifyMask);
 		}
 	}
@@ -1316,10 +1342,11 @@ setup(void)
 	/* init cursors */
 	curpoint = XCreateFontCursor(dpy, XC_left_ptr);
 	cursize = XCreateFontCursor(dpy, XC_sizing);
-	/* init appearance */
-	scheme = ecalloc(LENGTH(colors), sizeof(Clr *));
+	/* init colors */
 	for (i = 0; i < LENGTH(colors); i++)
-		scheme[i] = drw_scm_create(drw, colors[i], 3);
+		if (!XftColorAllocName(dpy, DefaultVisual(dpy, screen),
+				DefaultColormap(dpy, screen), colors[i], &cols[i]))
+			die("error, cannot allocate colors.\n");
 	/* supporting window for NetWMCheck */
 	wmcheckwin = XCreateSimpleWindow(dpy, root, 0, 0, 1, 1, 0, 0, 0);
 	XChangeProperty(dpy, wmcheckwin, netatom[NetWMCheck], XA_WINDOW, 32,
@@ -1691,6 +1718,9 @@ xerror(Display *dpy, XErrorEvent *ee)
 	|| (ee->request_code == X_GrabKey && ee->error_code == BadAccess)
 	|| (ee->request_code == X_CopyArea && ee->error_code == BadDrawable))
 		return 0;
+	else if (ee->request_code == X_ChangeWindowAttributes
+	&& ee->error_code == BadAccess)
+		die("dwm: another window manager may already be running.\n");
 	fprintf(stderr, "dwm: fatal error: request code=%d, error code=%d\n",
 		ee->request_code, ee->error_code);
 	return xerrorxlib(dpy, ee); /* may call exit */
@@ -1700,15 +1730,6 @@ int
 xerrordummy(Display *dpy, XErrorEvent *ee)
 {
 	return 0;
-}
-
-/* Startup Error handler to check if another window manager
- * is already running. */
-int
-xerrorstart(Display *dpy, XErrorEvent *ee)
-{
-	die("dwm: another window manager is already running.\n");
-	return -1;
 }
 
 void
@@ -1728,7 +1749,6 @@ main(int argc, char *argv[])
 		fputs("warning: no locale support\n", stderr);
 	if (!(dpy = XOpenDisplay(NULL)))
 		die("dwm: cannot open display.\n");
-	checkotherwm();
 	setup();
 	scan();
 	run();
