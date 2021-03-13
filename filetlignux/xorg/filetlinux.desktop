@@ -2,6 +2,6 @@
 Encoding=UTF-8
 Name=filet lignux
 Comment=Lean and palatable
-Exec=~/.config/filetlignux/dwm/dwm
+Exec=~/.config/filetlignux/launch
 Type=XSession
 
