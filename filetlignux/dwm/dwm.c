@@ -54,7 +54,9 @@
 #define TEXTPAD (xfont->ascent + xfont->descent) /* side padding of text */
 #define TEXTW(X) (drawgettextwidth(X) + TEXTPAD)
 
-/* edge dragging macros*/
+/* edge dragging and region macros*/
+#define BARZONE(X, Y) (topbar ? Y <= mons->my : Y >= mons->my + mons->mh - 1\
+	&& (X >= mons->mx) && (X <= mons->mx + mons->mw))
 #define INZONE(C, X, Y) (X >= C->x - C->bw && Y >= C->y - C->bw\
 	&& X <= C->x + WIDTH(C) + C->bw && Y <= C->y + HEIGHT(C) + C->bw)
 #define MOVEZONE(C, X, Y) (INZONE(C, X, Y)\
@@ -730,6 +732,8 @@ grabresize(const Arg *arg) {
 		return;
 	XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
 
+// TODO escape in bar zone barfocus
+
 	grabguard = 1;
 	do {
 		XMaskEvent(dpy, MOUSEMASK|ExposureMask|SubstructureRedirectMask|
@@ -810,7 +814,8 @@ grabresizecheck(Client *c) {
 	unsigned int mask;
 	XEvent ev;
 
-	if (!c || c != sel || c->isfullscreen || !MOUSEINF(dwin, x, y, mask)
+	if (!c || c != sel || c->isfullscreen || barfocus
+	|| !MOUSEINF(dwin, x, y, mask)
 	|| (mask & (Button1Mask|Button2Mask|Button3Mask|Button4Mask|Button5Mask))
 	|| (!MOVEZONE(c, x, y) && !RESIZEZONE(c, x, y))
 	|| (XGrabPointer(dpy, root, False, MOUSEMASK, GrabModeAsync, GrabModeAsync,
@@ -846,7 +851,7 @@ grabresizecheck(Client *c) {
 				}
 			}
 		}
-	} while (ev.type != ButtonPress && ev.type != ButtonRelease
+	} while (!BARZONE(x, y) && ev.type != ButtonPress && ev.type != ButtonRelease
 		&& ev.type != KeyPress && (MOVEZONE(c, x, y) || RESIZEZONE(c, x, y)));
 	XUngrabPointer(dpy, CurrentTime);
 }
@@ -1058,13 +1063,12 @@ rawmotion(XEvent *e)
 
 	/* top bar raise when mouse hits the screen edge.
 	   especially useful for apps that capture the keyboard. */
-	if (topbar ? ry <= mons->my : ry >= mons->my + mons->mh - 1
-		&& (rx >= mons->mx) && (rx <= mons->mx + mons->mw) && !barfocus) {
+	if (BARZONE(rx, ry) && !barfocus) {
 		barfocus = 1;
 		XRaiseWindow(dpy, barwin);
 		XSetInputFocus(dpy, root, RevertToPointerRoot, CurrentTime);
 		XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
-	} else if (barfocus) {
+	} else if (!BARZONE(rx, ry) && barfocus) {
 		barfocus = 0;
 		if (sel)
 			focus(sel);
