@@ -732,8 +732,6 @@ grabresize(const Arg *arg) {
 		return;
 	XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
 
-// TODO escape in bar zone barfocus
-
 	grabguard = 1;
 	do {
 		XMaskEvent(dpy, MOUSEMASK|ExposureMask|SubstructureRedirectMask|
