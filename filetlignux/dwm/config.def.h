@@ -34,8 +34,8 @@ static const Time zenmode           = 3; /* if set, delays showing rapid
                                             window title changes until the
                                             next natural refresh. */
 static const char font[]            = "monospace:bold:size=4";
-static const char dmenufont[]       = "monospace:size=8";
-                             /* fg        bg       highlight border sel-border */
+static const char dmenufont[]       = "monospace:size=5";
+                             /* fg        bg     highlight border sel-border */
 static const char *colors[] = { FOREGREY, BACKGREY, SELBLUE, MIDGREY, SELRED };
 
 /* tagging */
@@ -58,7 +58,7 @@ static Monitor mons[] = {{0}, {0}, {0}};
 static Monitor mons[] = {{0}};
 /* factor of main area size [0.05..0.95] (for each monitor) */
 static float mfact[] = {0.6};
-/* number of clients in main area (for each monitor*/
+/* number of clients in main area (for each monitor) */
 static int nmain[] = {1};
 static const int resizehints = 1;
                            /* 1 means respect size hints in tiled resizals */
@@ -67,9 +67,8 @@ static const int resizehints = 1;
 static const char lsymbol[] = ">";
 
 /* commands */
-static const char *dmenucmd[] = { "dmenu_run", "-p", ">", "-m", "0", "-i",
-	"-fn", dmenufont, "-nb", BACKGREY, "-nf", FOREGREY, "-sb", SELBLUE,
-	"-sf", FOREGREY, NULL };
+static const char *dmenucmd[] = {
+	"launcher", dmenufont, FOREGREY, BACKGREY, SELBLUE, NULL };
 static const char *termcmd[] = { "st", NULL };
 static const char *lockcmd[] = { "slock", NULL };
 static const char *upvol[]   = { "volumeup", NULL };

@@ -2,10 +2,9 @@
 
 # Check dependencies
 printf "\n\nChecking dependencies...\n\n"
-command -v rsync || (echo "need rsync"; exit 1)
-command -v conky || (echo "need conky"; exit 1)
-command -v feh || (echo "need feh"; exit 1)
-command -v xbacklight || (echo "need xbacklight"; exit 1)
+for dep in rsync conky feh xbacklight firefox nnn mupdf vim; do
+	command -v $dep || (echo "need $dep"; exit 1)
+done
 
 # Install base code.
 printf "\n\nInstalling codebase...\n\n"
@@ -13,7 +12,7 @@ mkdir -p ~/.config
 rsync -av --delete filetlignux/ ~/.config/filetlignux
 
 # Build everything that needs to be compiled.
-for build in dwm st xrootname; do
+for build in dmenu dwm st xrootname; do
 	printf "\n\nBuilding ${build}...\n\n"
 	cd ~/.config/filetlignux/$build/; make; cd -
 done
