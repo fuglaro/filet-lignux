@@ -2,7 +2,7 @@
 
 # Check dependencies
 printf "\n\nChecking dependencies...\n\n"
-for dep in rsync conky feh xbacklight firefox nnn mupdf vim; do
+for dep in rsync conky feh xbacklight firefox nnn mupdf vim gcc pkg-build; do
 	command -v $dep || (echo "need $dep"; exit 1)
 done
 
