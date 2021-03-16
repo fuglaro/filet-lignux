@@ -20,6 +20,12 @@ cd ~/filet-lignux
 ./install
 ```
 
+To also install the mouse keys, this must be installed to the system via sudo:
+
+```bash
+sudo ./sysinstall
+```
+
 # Thanks to, grateful forks, and contributions
 
 We stand on the shoulders of giants. They own this, far more than I do.
