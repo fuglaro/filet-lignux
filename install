@@ -34,3 +34,6 @@ for file in $(find ~/.config/filetlignux/installs/ -type f); do
 		ln -s $file ~/$(basename $file)
 	fi
 done
+
+# Prep
+mkdir -p ~/.vim
