@@ -912,6 +912,7 @@ manage(Window w, XWindowAttributes *wa)
 
 	if (!(c = calloc(1, sizeof(Client))))
 		die("calloc failed.\n");
+	attach(c);
 	c->win = w;
 	c->zenping = 0;
 	/* geometry */
@@ -952,13 +953,12 @@ manage(Window w, XWindowAttributes *wa)
 	updatesizehints(c);
 	updatewmhints(c);
 	XSelectInput(dpy, w, PropertyChangeMask|StructureNotifyMask);
-	attach(c);
-	restack(c, CliRaise);
 	PROPEDIT(PropModeAppend, c, NetClientList)
 	/* some windows require this */
 	XMoveResizeWindow(dpy, c->win, c->x + 2 * sw, c->y, c->w, c->h);
 	setclientstate(c, NormalState);
 	showhide(clients);
+	restack(c, CliRaise);
 	XMapWindow(dpy, c->win);
 	focus(c);
 }
