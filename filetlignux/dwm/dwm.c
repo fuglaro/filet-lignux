@@ -131,10 +131,9 @@ typedef struct {
 	const Arg arg;
 } Key;
 
-typedef struct Monitor Monitor;
-struct Monitor {
+typedef struct Monitor {
 	int mx, my, mw, mh;   /* screen size */
-};
+} Monitor;
 
 /* function declarations */
 static int applysizehints(Client *c, int *x, int *y, int *w, int *h);
