@@ -20,25 +20,32 @@ cd ~/filet-lignux
 ./install
 ```
 
+To also install the mouse keys, this must be installed to the system via sudo:
+
+```bash
+sudo ./sysinstall
+```
+
 # Thanks to, grateful forks, and contributions
 
 We stand on the shoulders of giants. They own this, far more than I do.
 
-https://github.com
-https://github.com/torvalds/linux
-https://dwm.suckless.org
-https://st.suckless.org
-https://st.suckless.org/patches/nordtheme
-https://st.suckless.org/patches/delkey
-https://tools.suckless.org/slock
-https://tools.suckless.org/dmenu/
-https://tools.suckless.org/dmenu/patches/mouse-suppor/
-https://github.com/brndnmtthws/conky
-https://www.vim.org
-https://github.com/tmux/tmux
-https://www.texturex.com/fractal-textures/fractal-design-picture-wallpaper-stock-art-image-definition-free-neuron-chaos-fractal-fracture-broken-synapse-texture/
-https://gist.github.com/palopezv/efd34059af6126ad970940bcc6a90f2e
-https://keithp.com/blogs/Cursor_tracking/
-https://www.jetbrains.com/lp/mono/
-https://github.com/akinozgen/dmenu_applications
-https://github.com/march-linux/mimi
+* https://archlinux.org/
+* https://github.com
+* https://github.com/torvalds/linux
+* https://dwm.suckless.org
+* https://st.suckless.org
+* https://st.suckless.org/patches/nordtheme
+* https://st.suckless.org/patches/delkey
+* https://tools.suckless.org/slock
+* https://tools.suckless.org/dmenu/
+* https://tools.suckless.org/dmenu/patches/mouse-suppor/
+* https://github.com/brndnmtthws/conky
+* https://www.vim.org
+* https://github.com/tmux/tmux
+* https://www.texturex.com/fractal-textures/fractal-design-picture-wallpaper-stock-art-image-definition-free-neuron-chaos-fractal-fracture-broken-synapse-texture/
+* https://gist.github.com/palopezv/efd34059af6126ad970940bcc6a90f2e
+* https://keithp.com/blogs/Cursor_tracking/
+* https://www.jetbrains.com/lp/mono/
+* https://github.com/akinozgen/dmenu_applications
+* https://github.com/march-linux/mimi
