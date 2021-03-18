@@ -17,21 +17,26 @@ for build in dmenu dwm st xrootname; do
 	cd ~/.config/filetlignux/$build/; make; cd -
 done
 
+# Install fonts.
+find ~/.config/filetlignux/fonts/*/fonts -type f | \
+	awk '{printf("ln -f -s %s ~/.local/share/fonts/\n", $1)}' | sh
+
 # Installing home dir config files.
 printf "\n\nLinking HOME dir config files...\n\n"
 for file in $(find ~/.config/filetlignux/installs/ -type f); do
-	printf "$(basename $file)\n"
-	if [[ -L ~/$(basename $file) && `readlink ~/$(basename $file)` \
-	== `ls -1a ~/.config/filetlignux/installs/$(basename $file)` ]]; then
+	dest=$(echo $file | sed -e 's:^.*/filetlignux/installs/::')
+	printf "$dest\n"
+	if [[ -L ~/$dest && `readlink ~/$dest` \
+	== `ls -1a ~/.config/filetlignux/installs/$dest` ]]; then
 		printf "...ok\n"
-	elif [ -f ~/$(basename $file) ]; then
-		echo "...moving aside (~/$(basename $file).old)"
-		mv ~/$(basename $file) ~/$(basename $file).old
-		echo "...installing link (~/$(basename $file))"
-		ln -s $file ~/$(basename $file)
 	else
-		echo "...installing link (~/$(basename $file))"
-		ln -s $file ~/$(basename $file)
+		if [ -f ~/$dest ]; then
+			echo "...moving aside (~/$dest.old)"
+			mv ~/$dest ~/$dest.old
+		fi
+		echo "...installing link (~/$dest)"
+		mkdir -p $(dirname $dest)
+		ln -s $file ~/$dest
 	fi
 done
 
