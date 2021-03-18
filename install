@@ -36,7 +36,7 @@ for file in $(find ~/.config/filetlignux/installs/ -type f); do
 			mv ~/$dest ~/$dest.old
 		fi
 		echo "...installing link (~/$dest)"
-		mkdir -p $(dirname $dest)
+		mkdir -p $(dirname ~/$dest)
 		ln -s $file ~/$dest
 	fi
 done
