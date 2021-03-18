@@ -18,6 +18,7 @@ for build in dmenu dwm st xrootname; do
 done
 
 # Install fonts.
+mkdir -p ~/.local/share/fonts
 find ~/.config/filetlignux/fonts/*/fonts -type f | \
 	awk '{printf("ln -f -s %s ~/.local/share/fonts/\n", $1)}' | sh
 
