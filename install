@@ -2,7 +2,7 @@
 
 # Check dependencies
 printf "\n\nChecking dependencies...\n\n"
-for dep in rsync conky feh xbacklight firefox nnn mupdf vim gcc; do
+for dep in slock rsync feh xbacklight firefox nnn mupdf vim gcc; do
 	command -v $dep || (echo "need $dep"; exit 1)
 done
 
@@ -12,7 +12,7 @@ mkdir -p ~/.config
 rsync -av --delete filetlignux/ ~/.config/filetlignux
 
 # Build everything that needs to be compiled.
-for build in dmenu dwm st xrootname; do
+for build in dmenu dwm st flstatus xrootname; do
 	printf "\n\nBuilding ${build}...\n\n"
 	cd ~/.config/filetlignux/$build/; make; cd -
 done
