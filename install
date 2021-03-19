@@ -2,7 +2,7 @@
 
 # Check dependencies
 printf "\n\nChecking dependencies...\n\n"
-for dep in slock rsync feh xbacklight firefox nnn mupdf vim gcc; do
+for dep in slock rsync feh xbacklight firefox nnn mupdf vim make gcc; do
 	command -v $dep || (echo "need $dep"; exit 1)
 done
 
