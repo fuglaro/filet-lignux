@@ -21,7 +21,11 @@ The heart of this project is a fork of dwm. Dwm is breathtakingly beautiful. Thi
 
 Significant changes:
 * More familiar and standard window manager bar.
-* Mouse 
+* Mouse and trackpad support for window movement, resizing and tile layout adjustment.
+* Bar focus when mouse hits edge - essential when working with windows that capture mouse and keyboard like with remote desktop applications.
+* Simpler monitor supprt - unified stack and workspacecs across all monitors.
+* Unified tiling, fullscreen and floating modes.
+* A whole chunk less code.
 
 ## Installation
 
