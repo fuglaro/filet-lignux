@@ -70,7 +70,6 @@ static const char lsymbol[] = ">";
 static const char *dmenucmd[] = {
 	"launcher", dmenufont, FOREGREY, BACKGREY, SELBLUE, NULL };
 static const char *termcmd[] = { "st", NULL };
-static const char *lockcmd[] = { "slock", NULL };
 static const char *upvol[]   = { "volumeup", NULL };
 static const char *downvol[] = { "volumedown", NULL };
 static const char *mutevol[] = { "volumemute", NULL };
@@ -79,56 +78,53 @@ static const char *dimup[]   = { "dimup", NULL };
 static const char *dimdown[] = { "dimdown", NULL };
 static const char *helpcmd[] = { "st", "-g68x24", "-t", "FiletLignux Controls",
 "-e", "bash", "-c", "printf 'FiletLignux Controls\n\
-                     Alt+`: launcher\n\
-               Shift+Alt+`: terminal\n\
-                 LeftClick: raise window\n\
-                   Shift+`: move window\n\
-                    Ctrl+`: resize window\n\
-              Shift+Ctrl+`: tile window\n\
+                   Win+Tab: launcher\n\
+             Win+Shift+Tab: terminal\n\
+                 Win+Space: move window\n\
+             Win+Alt+Space: resize window\n\
+            Win+Ctrl+Space: tile window\n\
                  Alt+Enter: fullscreen window\n\
-            Ctrl+Alt+Enter: raise window\n\
-      Shift+Ctrl+Alt+Enter: pin window\n\
-           (Shift+)Alt+Tab: (prev/)next window, and raise\n\
-          Ctrl+Alt+Up/Down: prev/next window\n\
-       Ctrl+Alt+Left/Right: switch to prev/next workspace\n\
- Shift+Ctrl+Alt+Left/Right: move with window to prev/next workspace\n\
-                 Alt+[1-9]: switch workspace\n\
-            Ctrl+Alt+[1-9]: combine workspace\n\
-           Shift+Alt+[1-9]: move window to workspace\n\
-      Shift+Ctrl+Alt+[1-9]: add window to workspace\n\
-               Shift+Alt+0: add window to all workspaces\n\
+                 Win+Enter: pin window\n\
+             Win+Alt+Enter: raise window\n\
+           (Shift+)Alt+Tab: switch window, and raise\n\
+               Win+Up/Down: switch window\n\
+            Win+Left/Right: switch workspace\n\
+      Win+Shift+Left/Right: switch workspace with window\n\
+                 Win+[1-9]: switch workspace\n\
+           Win+Shift+[1-9]: move window to workspace\n\
+                 Alt+[1-9]: add window to workspace\n\
+                     Alt+0: add window to all workspaces\n\
                     Alt+F4: close window\n\
-              Shift+Alt+F4: lock\n\
-             Shift+Ctrl+F4: sleep\n\
+                    Win+F4: sleep\n\
          Shift+Ctrl+Alt+F4: quit\n'; read -s -n 1", NULL };
 
 /* key definitions */
-#define MODKEY Mod1Mask
+#define AltMask Mod1Mask
+#define WinMask Mod4Mask
 #define TAGKEYS(KEY,TAG) \
-	{                            MODKEY, KEY, view, {.ui = 1 << TAG} }, \
-	{                MODKEY|ControlMask, KEY, toggleview, {.ui = 1 << TAG} }, \
-	{                  MODKEY|ShiftMask, KEY, tag, {.ui = 1 << TAG} }, \
-	{      MODKEY|ControlMask|ShiftMask, KEY, toggletag, {.ui = 1 << TAG} },
+	{                  WinMask, KEY, view, {.ui = 1 << TAG} }, \
+	{        WinMask|ShiftMask, KEY, tag, {.ui = 1 << TAG} }, \
+	{                  AltMask, KEY, toggletag, {.ui = 1 << TAG} },
 
 static const KeySym stackrelease = XK_Alt_L;
 static Key keys[] = {
-	/*                        modifier / key, function / argument */
-	{                        MODKEY, XK_grave, spawn, {.v = dmenucmd } },
-	{              MODKEY|ShiftMask, XK_grave, spawn, {.v = termcmd } },
-	{                     ShiftMask, XK_grave, grabresize, {.i = DragMove } },
-	{                   ControlMask, XK_grave, grabresize, {.i = DragSize } },
-	{         ControlMask|ShiftMask, XK_grave, togglefloating, {0} },
-	{                       MODKEY, XK_Return, togglefullscreen, {0} },
-	{           MODKEY|ControlMask, XK_Return, zoom, {0} },
-	{ MODKEY|ControlMask|ShiftMask, XK_Return, pin, {0} },
-	{                          MODKEY, XK_Tab, grabstack, {.i = +1 } },
-	{                MODKEY|ShiftMask, XK_Tab, grabstack, {.i = -1 } },
-	{             MODKEY|ControlMask, XK_Down, focusstack, {.i = +1 } },
-	{               MODKEY|ControlMask, XK_Up, focusstack, {.i = -1 } },
-	{             MODKEY|ControlMask, XK_Left, viewshift, {.i = -1 } },
-	{            MODKEY|ControlMask, XK_Right, viewshift, {.i = +1 } },
-	{   MODKEY|ControlMask|ShiftMask, XK_Left, viewtagshift, {.i = -1 } },
-	{  MODKEY|ControlMask|ShiftMask, XK_Right, viewtagshift, {.i = +1 } },
+	/*               modifier / key, function / argument */
+	{               WinMask, XK_Tab, spawn, {.v = dmenucmd } },
+	{     WinMask|ShiftMask, XK_Tab, spawn, {.v = termcmd } },
+	{             WinMask, XK_space, grabresize, {.i = DragMove } },
+	{     WinMask|AltMask, XK_space, grabresize, {.i = DragSize } },
+	{ WinMask|ControlMask, XK_space, togglefloating, {0} },
+	{            AltMask, XK_Return, togglefullscreen, {0} },
+	{            WinMask, XK_Return, pin, {0} },
+	{    WinMask|AltMask, XK_Return, zoom, {0} },
+	{               AltMask, XK_Tab, grabstack, {.i = +1 } },
+	{     AltMask|ShiftMask, XK_Tab, grabstack, {.i = -1 } },
+	{                WinMask, XK_Up, focusstack, {.i = -1 } },
+	{              WinMask, XK_Down, focusstack, {.i = +1 } },
+	{              WinMask, XK_Left, viewshift, {.i = -1 } },
+	{             WinMask, XK_Right, viewshift, {.i = +1 } },
+	{    WinMask|ShiftMask, XK_Left, viewtagshift, {.i = -1 } },
+	{   WinMask|ShiftMask, XK_Right, viewtagshift, {.i = +1 } },
 	TAGKEYS( XK_1, 0)
 	TAGKEYS( XK_2, 1)
 	TAGKEYS( XK_3, 2)
@@ -138,17 +134,16 @@ static Key keys[] = {
 	TAGKEYS( XK_7, 6)
 	TAGKEYS( XK_8, 7)
 	TAGKEYS( XK_9, 8)
-	{                  MODKEY|ShiftMask, XK_0, tag, {.ui = ~0 } },
-	{                           MODKEY, XK_F4, killclient, {0} },
-	{                 MODKEY|ShiftMask, XK_F4, spawn, {.v = lockcmd } },
-	{            ShiftMask|ControlMask, XK_F4, spawn, {.v = ssleep } },
-	{     MODKEY|ControlMask|ShiftMask, XK_F4, quit, {0} },
-	{              0, XF86XK_AudioLowerVolume, spawn, {.v = downvol } },
-	{                     0, XF86XK_AudioMute, spawn, {.v = mutevol } },
-	{              0, XF86XK_AudioRaiseVolume, spawn, {.v = upvol } },
-	{                         0, XF86XK_Sleep, spawn, {.v = ssleep } },
-	{               0, XF86XK_MonBrightnessUp, spawn, {.v = dimup } },
-	{             0, XF86XK_MonBrightnessDown, spawn, {.v = dimdown } },
+	{                 AltMask, XK_0, tag, {.ui = ~0 } },
+	{                AltMask, XK_F4, killclient, {0} },
+	{                WinMask, XK_F4, spawn, {.v = ssleep } },
+	{ AltMask|ControlMask|ShiftMask, XK_F4, quit, {0} },
+	{    0, XF86XK_AudioLowerVolume, spawn, {.v = downvol } },
+	{           0, XF86XK_AudioMute, spawn, {.v = mutevol } },
+	{    0, XF86XK_AudioRaiseVolume, spawn, {.v = upvol } },
+	{               0, XF86XK_Sleep, spawn, {.v = ssleep } },
+	{     0, XF86XK_MonBrightnessUp, spawn, {.v = dimup } },
+	{   0, XF86XK_MonBrightnessDown, spawn, {.v = dimdown } },
 };
 
 /* bar actions */

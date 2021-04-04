@@ -191,7 +191,6 @@ static void tile(void);
 static void togglefloating(const Arg *arg);
 static void togglefullscreen(const Arg *arg);
 static void toggletag(const Arg *arg);
-static void toggleview(const Arg *arg);
 static void unmanage(Client *c, int destroyed);
 static void unmapnotify(XEvent *e);
 static void updatemonitors(XEvent *e);
@@ -1520,13 +1519,6 @@ toggletag(const Arg *arg)
 		sel->tags = newtags;
 		arrange();
 	}
-}
-
-void
-toggleview(const Arg *arg)
-{
-	tagset ^= (arg->ui & TAGMASK);
-	arrange();
 }
 
 void
