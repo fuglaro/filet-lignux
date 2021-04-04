@@ -2,12 +2,30 @@
 
 A developer's linux configuration - a palatable lean slice.
 
-This project tries to harness the powers of a tiling window manager into a
-clean and simple user interface that is welcoming to users familiar with
-tradition window managers.
+Inspired by dwm, and largely forked from it. This project explores minimalism while still providing the full power of a desktop environment. It is not for everyone, and it is the result of strong opinions, such as:
+* **Complexity must justify itself**.
+* Lightweight is better than heavyweight.
+* Select your dependencies wisely: they are complexity, but not using them, or using the wrong ones, can lead to worse complexity.
+* Powerful features are good, but simplicity and clarity are essential.
+* Adding layers of simplicity, to avoid understanding something useful, only adds complexity, and is a trap for learning trivia instead of knowledge.
+* Steep learning curves are dangerous, but don't just push a vertical wall deeper; learning is good, so make the incline gradual for as long as possible.
+* Allow other tools to thrive - e.g: terminals don't need tabs or scrollback, that's what tmux is for.
 
-Everything in this project should be rigorously upheld to the principle that
-**complexity must justify itself**.
+## X11 vs Wayland
+
+This is built on X11, not Wayland, for no other reason than timing. Shortly after this project was started, NVIDIA support for Wayland was announced. This project will not include Wayland support due to the inevitable complexities of concurrently supporting multiple interfaces. When the timing is right, this will fork into a new project which can move in the direction of Wayland.
+
+## DWM fork
+
+The heart of this project is a fork of dwm. Dwm is breathtakingly beautiful. This started as a programming exercise to see if I could take something already very well placed in terms of simplicity and elegance, and make it even simpler, inside and out, without significantly moving away from powerful features. It ended up steering in a significantly different direction largely from the opinions stated above. I would best describe it now as dwm with a clean and simple user interface that is welcoming to users familiar with tradition window managers, whilst still holding on to powerful features.
+
+Significant changes:
+* More familiar and standard window manager bar.
+* Mouse and trackpad support for window movement, resizing and tile layout adjustment.
+* Bar focus when mouse hits edge - essential when working with windows that capture mouse and keyboard like with remote desktop applications.
+* Simpler monitor supprt - unified stack and workspacecs across all monitors.
+* Unified tiling, fullscreen and floating modes.
+* A whole chunk less code.
 
 ## Installation
 
