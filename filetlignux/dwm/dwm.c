@@ -1,10 +1,10 @@
 /* See LICENSE file for copyright and license details.
  *
- * dynamic window manager is designed like any other X client as well. It is
- * driven through handling X events. In contrast to other X clients, a window
- * manager selects for SubstructureRedirectMask on the root window, to receive
- * events about window (dis-)appearance. Only one X connection at a time is
- * allowed to select for this event mask.
+ * Filet-Lignux's dynamic window manager is designed like any other X client.
+ * It is driven through handling X events. In contrast to other X clients,
+ * a window manager selects for SubstructureRedirectMask on the root window,
+ * to receive events about window (dis-)appearance. Only one X connection at a
+ * time is allowed to select for this event mask.
  *
  * The event handlers of dwm are organized in an array which is accessed
  * whenever a new event has been fetched. This allows event dispatching
@@ -12,11 +12,14 @@
  *
  * Each child of the root window is called a client, except windows which have
  * set the override_redirect flag. Clients are organized in a linked client
- * list on each monitor, the focus history is remembered through a stack list
- * on each monitor. Each client contains a bit array to indicate the tags of a
- * client.
+ * list. Each client contains a bit array to indicate the tags (workspaces)
+ * of a client.
  *
- * Keys are organized as arrays and defined in config.h.
+ * Keyboard shortcuts are organized as arrays and defined in config.h.
+ *
+ * Mouse motion tracking governs window focus, along with
+ * a click-to-raise behavior. Mouse motion is stateful and supports different
+ * drag-modes for moving and resizing windows.
  *
  * To understand everything else, start reading main().
  */
@@ -89,18 +92,23 @@ enum { fg, bg, mark, bdr, selbdr }; /* colors */
 enum { NetSupported, NetWMName, NetWMState, NetWMCheck, /* EWMH atoms */
        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
        NetWMWindowTypeDialog, NetClientList, NetCliStack, NetLast };
+/* default atoms */
 enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast };
-                                                           /* default atoms */
+/* bar click regions */
 enum { ClkLauncher, ClkWinTitle, ClkStatus, ClkTagBar, ClkLast };
+/* mouse motion modes */
 enum { DragMove, DragSize, DragTile, DragCheck, DragNone };
+/* window stack actions */
 enum { CliPin, CliRaise, CliZoom, CliRemove, CliRefresh };
 
+/* argument template for keyboard shortcut and bar click actions */
 typedef union {
 	int i;
 	unsigned int ui;
 	const void *v;
 } Arg;
 
+/* bar click action */
 typedef struct {
 	unsigned int click;
 	unsigned int button;
@@ -108,6 +116,7 @@ typedef struct {
 	const Arg arg;
 } Button;
 
+/* clients wrap managed windows */
 typedef struct Client Client;
 struct Client {
 	char name[256], zenname[256];
@@ -123,6 +132,7 @@ struct Client {
 	Time zenping;
 };
 
+/* keyboard shortcut action */
 typedef struct {
 	unsigned int mod;
 	KeySym keysym;
@@ -130,12 +140,14 @@ typedef struct {
 	const Arg arg;
 } Key;
 
+/* A monitor could be a connected display.
+ * You can also have multiple monitors across displays if you
+ * want custom windowing regions. */
 typedef struct Monitor {
-	int mx, my, mw, mh;   /* screen size */
+	int mx, my, mw, mh;   /* windowing region size */
 } Monitor;
 
 /* function declarations */
-static int applysizehints(Client *c, int *x, int *y, int *w, int *h);
 static void arrange(void);
 static void attach(Client *c);
 static void buttonpress(XEvent *e);
@@ -257,69 +269,6 @@ static XftFont *xfont;
 static XftColor cols[LENGTH(colors)];
 /* compile-time check if all tags fit into an unsigned int bit array. */
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
-
-int
-applysizehints(Client *c, int *x, int *y, int *w, int *h)
-{
-	int baseismin, m1, m2;
-
-	/* snap position to edges */
-	for (m1 = 0; m1 < MONLEN-1 && !INMON(*x+snap,*y+snap, mons[m1]); m1++);
-	for (m2 = 0; m2 < MONLEN-1 && !INMON(*x+*w-snap,*y+*h-snap, mons[m2]); m2++);
-	/* snap position */
-	*x = (abs(mons[m1].mx - *x) < snap) ? mons[m1].mx : *x;
-	*y = (abs(WINY(mons[m1]) - *y) < snap) ? WINY(mons[m1]) : *y;
-	/* snap size */
-	if (abs((mons[m2].mx + mons[m2].mw) - (*x + *w + 2*c->bw)) < snap)
-		*w = mons[m2].mx + mons[m2].mw - *x - 2*c->bw;
-	if (abs((WINY(mons[m2]) + WINH(mons[m2])) - (*y + *h + 2*c->bw)) < snap)
-		*h = WINY(mons[m2]) + WINH(mons[m2]) - *y - 2*c->bw;
-
-	/* set minimum possible */
-	*w = MAX(1, *w);
-	*h = MAX(1, *h);
-	{
-		if (*x > sw)
-			*x = sw - WIDTH(c);
-		if (*y > sh)
-			*y = sh - HEIGHT(c);
-		if (*x + *w + 2 * c->bw < 0)
-			*x = 0;
-		if (*y + *h + 2 * c->bw < 0)
-			*y = 0;
-	}
-	if (*h < BARH)
-		*h = BARH;
-	if (*w < BARH)
-		*w = BARH;
-	if (resizehints || c->isfloating) {
-		/* see last two sentences in ICCCM 4.1.2.3 */
-		baseismin = c->basew == c->minw && c->baseh == c->minh;
-		if (!baseismin) { /* temporarily remove base dimensions */
-			*w -= c->basew;
-			*h -= c->baseh;
-		}
-		/* adjust for aspect limits */
-		if (c->mina > 0 && c->maxa > 0) {
-			if (c->maxa < (float)*w / *h)
-				*w = *h * c->maxa + 0.5;
-			else if (c->mina < (float)*h / *w)
-				*h = *w * c->mina + 0.5;
-		}
-		if (baseismin) { /* increment calculation requires this */
-			*w -= c->basew;
-			*h -= c->baseh;
-		}
-		/* restore base dimensions */
-		*w = MAX(*w + c->basew, c->minw);
-		*h = MAX(*h + c->baseh, c->minh);
-		if (c->maxw)
-			*w = MIN(*w, c->maxw);
-		if (c->maxh)
-			*h = MIN(*h, c->maxh);
-	}
-	return *x != c->x || *y != c->y || *w != c->w || *h != c->h;
-}
 
 void
 arrange(void)
@@ -769,7 +718,7 @@ grabresizeabort() {
 	/* update the monitor layout to match any tiling changes */
 	if (sel && dragmode == DragTile) {
 		for (m = 0; m < MONLEN-1 && !INMON(sel->x, sel->y, mons[m]); m++);
-		mfact[m] = MIN(0.95, MAX(0.1, (float)WIDTH(sel) / mons[m].mw));
+		mfact[m] = MIN(0.95, MAX(0.05, (float)WIDTH(sel) / mons[m].mw));
 		nmain[m] = MAX(1, mons[m].mh / HEIGHT(sel));
 		tile();
 	}
@@ -994,9 +943,9 @@ rawmotion()
 
 	/* handle any drag modes */
 	if (sel && dragmode == DragMove)
-		resize(sel, sel->x + x, sel->y + y, sel->w, sel->h);
+		resize(sel, sel->fx + x, sel->fy + y, sel->fw, sel->fh);
 	if (sel && (dragmode == DragSize || dragmode == DragTile))
-		resize(sel, sel->x, sel->y, MAX(sel->w + x, 1), MAX(sel->h + y, 1));
+		resize(sel, sel->fx, sel->fy, MAX(sel->fw + x, 1), MAX(sel->fh + y, 1));
 	if (dragmode == DragCheck && (!sel || BARZONE(rx, ry)
 		|| (!MOVEZONE(sel, rx, ry) && !RESIZEZONE(sel, rx, ry))))
 		grabresizeabort();
@@ -1031,7 +980,54 @@ rawmotion()
 void
 resize(Client *c, int x, int y, int w, int h)
 {
-	if (applysizehints(c, &x, &y, &w, &h))
+	int m1, m2;
+
+	if (c->isfloating && !c->isfullscreen) {
+		c->fx = x;
+		c->fy = y;
+		c->fw = w;
+		c->fh = h;
+		/* snap position to edges */
+		for (m1 = 0; m1 < MONLEN-1 && !INMON(x+snap, y+snap, mons[m1]); m1++);
+		for (m2 = 0; m2 < MONLEN-1 && !INMON(x+w-snap, y+h-snap, mons[m2]); m2++);
+		/* snap position */
+		x = (abs(mons[m1].mx - x) < snap) ? mons[m1].mx : x;
+		y = (abs(WINY(mons[m1]) - y) < snap) ? WINY(mons[m1]) : y;
+		/* snap size */
+		if (abs((mons[m2].mx + mons[m2].mw) - (x + w + 2*c->bw)) < snap)
+			w = mons[m2].mx + mons[m2].mw - x - 2*c->bw;
+		if (abs((WINY(mons[m2]) + WINH(mons[m2])) - (y + h + 2*c->bw)) < snap)
+			h = WINY(mons[m2]) + WINH(mons[m2]) - y - 2*c->bw;
+	}
+
+	/* set minimum possible size */
+	w = MAX(1, w);
+	h = MAX(1, h);
+	/* return to visible area */
+	x = (x > sw) ? sw - WIDTH(c) : x;
+	y = (y > sh) ? sh - HEIGHT(c) : y;
+	x = (x + w + 2 * c->bw < 0) ? 0 : x;
+	y = (y + h + 2 * c->bw < 0) ? 0 : y;
+
+	/* adjust for aspect limits */
+	/* see last two sentences in ICCCM 4.1.2.3 */
+	w -= c->basew;
+	h -= c->baseh;
+	if (c->mina > 0 && c->maxa > 0) {
+		if (c->maxa < (float)w / h)
+			w = h * c->maxa + 0.5;
+		else if (c->mina < (float)h / w)
+			h = w * c->mina + 0.5;
+	}
+
+	/* restore base dimensions and apply max and min dimensions */
+	w = MAX(w + c->basew, c->minw);
+	h = MAX(h + c->baseh, c->minh);
+	w = (c->maxw) ? MIN(w, c->maxw) : w;
+	h = (c->maxh) ? MIN(h, c->maxh) : h;
+
+	/* apply the resize if anything ended up changing */
+	if (x != c->x || y != c->y || w != c->w || h != c->h)
 		resizeclient(c, x, y, w, h);
 }
 
@@ -1044,12 +1040,7 @@ resizeclient(Client *c, int x, int y, int w, int h)
 	c->y = wc.y = y;
 	c->w = wc.width = w;
 	c->h = wc.height = h;
-	if (c->isfloating && !c->isfullscreen) {
-		c->fx = c->x;
-		c->fy = c->y;
-		c->fw = c->w;
-		c->fh = c->h;
-	}
+	/* fullscreen changes update the border width */
 	wc.border_width = c->bw;
 	XConfigureWindow(dpy, c->win, CWX|CWY|CWWidth|CWHeight|CWBorderWidth, &wc);
 	configure(c);
@@ -1229,7 +1220,7 @@ setfullscreen(Client *c, int fullscreen)
 		c->isfullscreen = 0;
 		c->isfloating = c->fstate;
 		c->bw = c->fbw;
-		resizeclient(c, c->fx, c->fy, c->fw, c->fh);
+		resize(c, c->fx, c->fy, c->fw, c->fh);
 	}
 	arrange();
 }
@@ -1534,35 +1525,27 @@ updatesizehints(Client *c)
 	long msize;
 	XSizeHints size;
 
+	c->basew = c->baseh = c->maxw = c->maxh = c->minw = c->minh = 0;
+	c->maxa = c->mina = 0.0;
 	if (!XGetWMNormalHints(dpy, c->win, &size, &msize))
-		/* size is uninitialized, ensure that size.flags aren't used */
-		size.flags = PSize;
+		return;
+
 	if (size.flags & PBaseSize) {
-		c->basew = size.base_width;
-		c->baseh = size.base_height;
-	} else if (size.flags & PMinSize) {
-		c->basew = size.min_width;
-		c->baseh = size.min_height;
-	} else
-		c->basew = c->baseh = 0;
+		c->basew = c->minw = size.base_width;
+		c->baseh = c->minh = size.base_height;
+	}
 	if (size.flags & PMaxSize) {
 		c->maxw = size.max_width;
 		c->maxh = size.max_height;
-	} else
-		c->maxw = c->maxh = 0;
+	}
 	if (size.flags & PMinSize) {
 		c->minw = size.min_width;
 		c->minh = size.min_height;
-	} else if (size.flags & PBaseSize) {
-		c->minw = size.base_width;
-		c->minh = size.base_height;
-	} else
-		c->minw = c->minh = 0;
+	}
 	if (size.flags & PAspect) {
 		c->mina = (float)size.min_aspect.y / size.min_aspect.x;
 		c->maxa = (float)size.max_aspect.x / size.max_aspect.y;
-	} else
-		c->maxa = c->mina = 0.0;
+	}
 }
 
 void

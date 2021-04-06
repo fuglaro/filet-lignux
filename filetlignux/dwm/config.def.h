@@ -7,7 +7,7 @@
  * to users of less-leet window managers, while still supporting
  * productivity boosting behaviours. Consider this like a gateway
  * drug to the beauty of dwm - friendly to noob and leet alike.
- *
+ * Main differences in dwm fork:
  * - There is only a tiled layout but windows will launch in floating mode.
  * - Monitor association of windows based on floating mode position.
  * - Fullscreen mode for windows replaces the monocle layout.
@@ -15,7 +15,8 @@
  * - Changed bindings to be closer to less-leet window managers.
  *     * Alt+Tab combos raise windows temporarily, and then zoom on release.
  * - Mouse resize movements triggered by keys not buttons.
- * - Mouse resize controls at the edge of windows. */
+ * - Mouse resize controls at the edge of windows.
+ */
 
 #include <X11/XF86keysym.h>
 
@@ -60,8 +61,6 @@ static Monitor mons[] = {{0}};
 static float mfact[] = {0.6};
 /* number of clients in main area (for each monitor) */
 static int nmain[] = {1};
-static const int resizehints = 1;
-                           /* 1 means respect size hints in tiled resizals */
 
 /* launcher symbol */
 static const char lsymbol[] = ">";
@@ -76,7 +75,7 @@ static const char *mutevol[] = { "volumemute", NULL };
 static const char *ssleep[]  = { "sussleep", NULL };
 static const char *dimup[]   = { "dimup", NULL };
 static const char *dimdown[] = { "dimdown", NULL };
-static const char *helpcmd[] = { "st", "-g68x24", "-t", "FiletLignux Controls",
+static const char *helpcmd[] = { "st", "-g66x21", "-t", "FiletLignux Controls",
 "-e", "bash", "-c", "printf 'FiletLignux Controls\n\
                    Win+Tab: launcher\n\
              Win+Shift+Tab: terminal\n\
@@ -98,7 +97,7 @@ static const char *helpcmd[] = { "st", "-g68x24", "-t", "FiletLignux Controls",
                     Win+F4: sleep\n\
          Shift+Ctrl+Alt+F4: quit\n'; read -s -n 1", NULL };
 
-/* key definitions */
+/* keyboard shortcut definitions */
 #define AltMask Mod1Mask
 #define WinMask Mod4Mask
 #define TAGKEYS(KEY,TAG) \
