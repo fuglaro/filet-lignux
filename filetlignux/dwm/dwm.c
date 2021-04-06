@@ -693,13 +693,14 @@ grabresize(const Arg *arg) {
 	/* detect if we should be dragging the tiled layout */
 	if (dragmode == DragSize && !sel->isfloating)
 		dragmode = DragTile;
-	/* bring the window to the top */
-	restack(sel, CliRaise);
 	/* capture input */
 	XGrabPointer(dpy, root, True, ButtonPressMask|ButtonReleaseMask
 		|PointerMotionMask, GrabModeAsync, GrabModeAsync,None,cursize,CurrentTime);
-	if (dragmode != DragCheck)
+	if (dragmode != DragCheck) {
 		XGrabKeyboard(dpy, root, True, GrabModeAsync, GrabModeAsync, CurrentTime);
+		/* bring the window to the top */
+		restack(sel, CliRaise);
+	}
 }
 
 void
