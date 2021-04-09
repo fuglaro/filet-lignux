@@ -681,15 +681,12 @@ grabresize(const Arg *arg) {
 	if (dragmode == arg->i)
 		return;
 	/* only grab if there is a selected window,
-	   no support moving fullscreen windows by mouse */
-	if (!sel || sel->isfullscreen)
+	   no support moving fullscreen or repositioning tiled windows. */
+	if (!sel || sel->isfullscreen || (arg->i == DragMove && !sel->isfloating))
 		return;
 
 	/* set the drag mode so future motion applies to the action */
 	dragmode = arg->i;
-	/* movement should untile */
-	if (dragmode == DragMove && !sel->isfloating)
-		togglefloating(NULL);
 	/* detect if we should be dragging the tiled layout */
 	if (dragmode == DragSize && !sel->isfloating)
 		dragmode = DragTile;
@@ -937,7 +934,7 @@ rawmotion()
 	static Client *c = NULL;
 
 	/* capture pointer and motion details */
-	if (!MOUSEINF(cw, rx, ry, dui))
+	if (!MOUSEINF(cw, rx, ry, mask))
 		return;
 	x = rx - lx; lx = rx;
 	y = ry - ly; ly = ry;
@@ -975,8 +972,7 @@ rawmotion()
 	if (c && c != sel)
 		focus(c);
 	/* watch for border edge locations for resizing */
-	if (cw != barwin && c && !barfocus && MOUSEINF(dwin, x, y, mask) && !mask
-	&& (MOVEZONE(c, x, y) || RESIZEZONE(c, x, y)))
+	if (c && !mask && (MOVEZONE(c, rx, ry) || RESIZEZONE(c, rx, ry)))
 		grabresize(&(Arg){.i = DragCheck});
 }
 
@@ -1234,7 +1230,6 @@ setup(void)
 	int i, xre;
 	unsigned char xi[XIMaskLen(XI_RawMotion)] = { 0 };
 	XIEventMask evm;
-	XSetWindowAttributes wa;
 	Atom utf8string;
 
 	/* clean up any zombies immediately */
@@ -1283,6 +1278,7 @@ setup(void)
 	/* init cursors */
 	curpoint = XCreateFontCursor(dpy, XC_left_ptr);
 	cursize = XCreateFontCursor(dpy, XC_sizing);
+	XDefineCursor(dpy, root, curpoint);
 	/* init colors */
 	for (i = 0; i < LENGTH(colors); i++)
 		if (!XftColorAllocName(dpy, DefaultVisual(dpy, screen),
@@ -1307,16 +1303,12 @@ setup(void)
 			.override_redirect = True,
 			.background_pixmap = ParentRelative,
 			.event_mask = ButtonPressMask|ExposureMask});
-	XDefineCursor(dpy, barwin, curpoint);
 	XMapRaised(dpy, barwin);
 	XSetClassHint(dpy, barwin, &(XClassHint){"dwm", "dwm"});
 	updatestatus();
 	/* select events */
-	wa.cursor = curpoint;
-	wa.event_mask = SubstructureRedirectMask|SubstructureNotifyMask
-		|ButtonPressMask|ButtonReleaseMask|StructureNotifyMask|PropertyChangeMask;
-	XChangeWindowAttributes(dpy, root, CWEventMask|CWCursor, &wa);
-	XSelectInput(dpy, root, wa.event_mask);
+	XSelectInput(dpy, root, SubstructureRedirectMask|SubstructureNotifyMask
+		|ButtonPressMask|ButtonReleaseMask|StructureNotifyMask|PropertyChangeMask);
 	/* prepare motion capture */
 	rawmotion();
 	/* select xinput events */
