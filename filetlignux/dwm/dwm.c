@@ -945,8 +945,10 @@ rawmotion()
 	/* handle any drag modes */
 	if (sel && dragmode == DragMove)
 		resize(sel, sel->fx + x, sel->fy + y, sel->fw, sel->fh);
-	if (sel && (dragmode == DragSize || dragmode == DragTile))
+	if (sel && dragmode == DragSize)
 		resize(sel, sel->fx, sel->fy, MAX(sel->fw + x, 1), MAX(sel->fh + y, 1));
+	if (sel && dragmode == DragTile)
+		resize(sel, sel->x, sel->y, MAX(sel->w + x, 1), MAX(sel->h + y, 1));
 	if (dragmode == DragCheck && (!sel || BARZONE(rx, ry)
 		|| (!MOVEZONE(sel, rx, ry) && !RESIZEZONE(sel, rx, ry))))
 		grabresizeabort();
