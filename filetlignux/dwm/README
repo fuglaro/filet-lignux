@@ -8,6 +8,7 @@ productivity boosting behaviours. Consider this like a gateway
 drug to the beauty of dwm.
 
 - There is only the tiled layout but windows will launch in floating mode.
+	* Tiled layout grid layout controled by mouse drag.
 - Fullscreen mode for each client window replaces the monocle layout.
 - Less daunting bar arrangement.
 - Additional window states:
