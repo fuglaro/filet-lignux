@@ -24,24 +24,21 @@
  * To understand everything else, start reading main().
  */
 #include <errno.h>
-#include <locale.h>
 #include <signal.h>
-#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/types.h>
 #include <sys/wait.h>
 #include <X11/cursorfont.h>
 #include <X11/extensions/XInput2.h>
 #include <X11/extensions/Xrandr.h>
 #include <X11/keysym.h>
 #include <X11/Xatom.h>
+#include <X11/Xft/Xft.h>
 #include <X11/Xlib.h>
 #include <X11/Xproto.h>
 #include <X11/Xutil.h>
-#include <X11/Xft/Xft.h>
 
 /* basic macros */
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
@@ -1232,7 +1229,7 @@ setup(void)
 	XIEventMask evm;
 	Atom utf8string;
 
-	/* clean up any zombies immediately */
+	/* register handler to clean up any zombies immediately */
 	sigchld(0);
 
 	/* init screen and display */
@@ -1357,12 +1354,16 @@ showhide(Client *c)
 	}
 }
 
+
 void
 sigchld(int unused)
 {
+	/* self-register this method as the SIGCHLD handler (if haven't already) */
 	if (signal(SIGCHLD, sigchld) == SIG_ERR) {
 		die("can't install SIGCHLD handler.\n");
 	}
+
+	/* immediately release resources associated with any zombie child */
 	while (0 < waitpid(-1, NULL, WNOHANG));
 }
 
@@ -1660,8 +1661,6 @@ main(int argc, char *argv[])
 		die("dwm-"VERSION"\n");
 	else if (argc != 1)
 		die("usage: dwm [-v]\n");
-	if (!setlocale(LC_CTYPE, "") || !XSupportsLocale())
-		fputs("warning: no locale support\n", stderr);
 	if (!(dpy = XOpenDisplay(NULL)))
 		die("dwm: cannot open display.\n");
 	setup();
