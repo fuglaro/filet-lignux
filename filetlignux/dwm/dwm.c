@@ -43,8 +43,7 @@
 /* basic macros */
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
-#define CLEANMASK(mask) (mask & ~(numlockmask|LockMask)\
-	& (ShiftMask|ControlMask|Mod1Mask|Mod2Mask|Mod3Mask|Mod4Mask|Mod5Mask))
+#define KEYMASK(mask) (mask & (ShiftMask|ControlMask|Mod1Mask|Mod4Mask))
 #define ISVISIBLE(C) ((C->tags & tagset))
 #define LENGTH(X) (sizeof X / sizeof X[0])
 #define MOUSEINF(W,X,Y,M) (XQueryPointer(dpy,root,&dwin,&W,&X,&Y,&di,&di,&M))
@@ -224,7 +223,6 @@ static Window barwin;
 static int barfocus;
 static int dragmode = DragNone;
 static int (*xerrorxlib)(Display *, XErrorEvent *);
-static unsigned int numlockmask;
 static unsigned int tagset = 1;
 static void (*handler[LASTEvent]) (XEvent *) = {
 	[ButtonPress] = buttonpress,
@@ -647,29 +645,15 @@ grabkeys(void)
 {
 	unsigned int i, j;
 	KeyCode code;
-	XModifierKeymap *modmap;
+	/* NumLock assumed to be Mod2Mask */
+	unsigned int modifiers[] = { 0, LockMask, Mod2Mask, Mod2Mask|LockMask };
 
-	/* update numlock mask */
-	numlockmask = 0;
-	modmap = XGetModifierMapping(dpy);
-	for (i = 0; i < 8; i++)
-		for (j = 0; j < modmap->max_keypermod; j++)
-			if (modmap->modifiermap[i * modmap->max_keypermod + j]
-				== XKeysymToKeycode(dpy, XK_Num_Lock))
-				numlockmask = (1 << i);
-	XFreeModifiermap(modmap);
-
-	{
-		unsigned int modifiers[] = {
-			0, LockMask, numlockmask, numlockmask|LockMask };
-
-		XUngrabKey(dpy, AnyKey, AnyModifier, root);
-		for (i = 0; i < LENGTH(keys); i++)
-			if ((code = XKeysymToKeycode(dpy, keys[i].keysym)))
-				for (j = 0; j < LENGTH(modifiers); j++)
-					XGrabKey(dpy, code, keys[i].mod | modifiers[j], root,
-						True, GrabModeAsync, GrabModeAsync);
-	}
+	XUngrabKey(dpy, AnyKey, AnyModifier, root);
+	for (i = 0; i < LENGTH(keys); i++)
+		if ((code = XKeysymToKeycode(dpy, keys[i].keysym)))
+			for (j = 0; j < LENGTH(modifiers); j++)
+				XGrabKey(dpy, code, keys[i].mod | modifiers[j], root,
+					True, GrabModeAsync, GrabModeAsync);
 }
 
 void
@@ -735,15 +719,12 @@ void
 keypress(XEvent *e)
 {
 	unsigned int i;
-	KeySym keysym;
-	XKeyEvent *ev;
+	KeySym key;
 
 	grabresizeabort();
-	ev = &e->xkey;
-	keysym = XKeycodeToKeysym(dpy, (KeyCode)ev->keycode, 0);
+	key = XKeycodeToKeysym(dpy, (KeyCode)e->xkey.keycode, 0);
 	for (i = 0; i < LENGTH(keys); i++)
-		if (keysym == keys[i].keysym
-		&& CLEANMASK(keys[i].mod) == CLEANMASK(ev->state))
+		if (key == keys[i].keysym && KEYMASK(keys[i].mod) == KEYMASK(e->xkey.state))
 			keys[i].func(&(keys[i].arg));
 }
 
