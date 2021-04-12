@@ -11,6 +11,7 @@ Inspired by dwm, and largely forked from it. This project explores minimalism wh
 * Steep learning curves are dangerous, but don't just push a vertical wall deeper; learning is good, so make the incline gradual for as long as possible.
 * Allow other tools to thrive - e.g: terminals don't need tabs or scrollback, that's what tmux is for.
 * Fix where fixes belong - don't work around bugs in other applications, contribute to them, or make something better.
+* Improvement via reduction is sometimes what a project desperately needs, because we do so tend to just add. (https://www.theregister.com/2021/04/09/people_complicate_things/)
 
 ## X11 vs Wayland
 
