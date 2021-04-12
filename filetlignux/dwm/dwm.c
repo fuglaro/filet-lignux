@@ -44,6 +44,7 @@
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
 #define KEYMASK(mask) (mask & (ShiftMask|ControlMask|Mod1Mask|Mod4Mask))
+#define KCODE(keysym) ((KeyCode)(XKeysymToKeycode(dpy, keysym)))
 #define ISVISIBLE(C) ((C->tags & tagset))
 #define LENGTH(X) (sizeof X / sizeof X[0])
 #define MOUSEINF(W,X,Y,M) (XQueryPointer(dpy,root,&dwin,&W,&X,&Y,&di,&di,&M))
@@ -131,7 +132,7 @@ struct Client {
 /* keyboard shortcut action */
 typedef struct {
 	unsigned int mod;
-	KeySym keysym;
+	KeySym key;
 	void (*func)(const Arg *);
 	const Arg arg;
 } Key;
@@ -644,16 +645,14 @@ void
 grabkeys(void)
 {
 	unsigned int i, j;
-	KeyCode code;
 	/* NumLock assumed to be Mod2Mask */
 	unsigned int modifiers[] = { 0, LockMask, Mod2Mask, Mod2Mask|LockMask };
 
 	XUngrabKey(dpy, AnyKey, AnyModifier, root);
 	for (i = 0; i < LENGTH(keys); i++)
-		if ((code = XKeysymToKeycode(dpy, keys[i].keysym)))
-			for (j = 0; j < LENGTH(modifiers); j++)
-				XGrabKey(dpy, code, keys[i].mod | modifiers[j], root,
-					True, GrabModeAsync, GrabModeAsync);
+		for (j = 0; j < LENGTH(modifiers) && KCODE(keys[i].key); j++)
+			XGrabKey(dpy, KCODE(keys[i].key), keys[i].mod | modifiers[j], root,
+				True, GrabModeAsync, GrabModeAsync);
 }
 
 void
@@ -719,12 +718,11 @@ void
 keypress(XEvent *e)
 {
 	unsigned int i;
-	KeySym key;
 
 	grabresizeabort();
-	key = XKeycodeToKeysym(dpy, (KeyCode)e->xkey.keycode, 0);
 	for (i = 0; i < LENGTH(keys); i++)
-		if (key == keys[i].keysym && KEYMASK(keys[i].mod) == KEYMASK(e->xkey.state))
+		if (e->xkey.keycode == KCODE(keys[i].key)
+		&& KEYMASK(keys[i].mod) == KEYMASK(e->xkey.state))
 			keys[i].func(&(keys[i].arg));
 }
 
@@ -732,8 +730,9 @@ void
 keyrelease(XEvent *e)
 {
 	grabresizeabort();
-	if (dragmode == DragNone
-	&& stackrelease == XKeycodeToKeysym(dpy, (KeyCode)e->xkey.keycode, 0)) {
+	/* zoom after cycling windows if releasing the modifier key, this gives
+	   Alt+Tab+Tab... behavior like with common window managers */
+	if (dragmode == DragNone && KCODE(stackrelease) == e->xkey.keycode) {
 		restack(sel, CliZoom);
 		XUngrabKeyboard(dpy, CurrentTime);
 	}
