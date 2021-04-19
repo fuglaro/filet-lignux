@@ -2,7 +2,7 @@
 
 ## Design and Engineering Philosophies
 
-This project explores how far a software product can be pushed in terms of simplicity and minimalism, both inside and out, without losing powererful features. Window Managers are often a source of bloat, as all software tends to be. *filetwm* pushes a Windowm Manager to its leanest essence. It is a joy to use because it does what it needs to, and then gets out of the way. The opinions that drove the project are:
+This project explores how far a software product can be pushed in terms of simplicity and minimalism, both inside and out, without losing powerful features. Window Managers are often a source of bloat, as all software tends to be. *filetwm* pushes a Windowm Manager to its leanest essence. It is a joy to use because it does what it needs to, and then gets out of the way. The opinions that drove the project are:
 
 * **Complexity must justify itself**.
 * Lightweight is better than heavyweight.
@@ -17,7 +17,7 @@ This project explores how far a software product can be pushed in terms of simpl
 
 ## DWM fork
 
-The heart of this project is a fork of dwm. This started as a programming exercise to aggressively simplify a codebase already highly respected for it's simplicity. It ended up making some significant user experience changes, largely from the opinions stated above. I would best describe it now as dwm with a cleanr, simpler, and more approachable user interface, whilst still holding on to powerful features.
+The heart of this project is a fork of dwm. This started as a programming exercise to aggressively simplify a codebase already highly respected for its simplicity. It ended up making some significant user experience changes, largely from the opinions stated above. I would best describe it now as dwm with a cleaner, simpler, and more approachable user interface, whilst still holding on to powerful features.
 
 Significant changes:
 * Unified tiling, fullscreen and floating modes.
@@ -30,12 +30,11 @@ Significant changes:
 * Support for pinning windows.
 * Zen-mode for limiting bar updates.
 * More easily customise with post-complile plugins.
-* A whole chunk less code.
+* A whole tonne less code.
 
 ## X11 vs Wayland
 
 This is built on X11, not Wayland, for no other reason than timing. Shortly after this project was started, NVIDIA support for Wayland was announced. This project will not include Wayland support due to the inevitable complexities of concurrently supporting multiple interfaces. When the timing is right, this will fork into a new project which can move in the direction of Wayland.
-
 
 ## Building
 
@@ -55,7 +54,7 @@ startx filetwm
 
 ## Configuration
 
-What is a Window Manager without configuration options? As minimal as this is, tweaking is essential for everyone to set things up just how they like them.
+What is a Window Manager without configuration options? As minimal as this project is, tweaking is essential for everyone to set things up just how they like things.
 
 Customise filetwm by making a '.so' file plugin and installing it to one of filetwm's config locations:
 * User config: `~/.config/filetwmconf.so`
@@ -72,7 +71,9 @@ void _() {
     extern char *font; font = "monospace:bold:size=5";
 }
 ```
-Many other configurations can be made with the plugin system including for colors, layout, borders, keyboard commands, launcher, monitors, and top-bar actions. Any non-static global variable in the `filetwm.c` source file can be changed in this way. See the Configuraton Section.
+Save it as `filetwmconf.c`, then build and install it to the user config location with the command in the comment of the file.
+
+Many other configurations can be made via this plugin system and supported options include: colors, layout, borders, keyboard commands, launcher command, monitors, and top-bar actions. Any non-static global variable in the `filetwm.c` source file can be changed in this way. Please see the Configuraton Section.
 
 ### Status bar text
 To configure the status text on the top-bar, set the name of the Root Window with a tool like `xsetroot`. There are many examples configured for other Window Managers that respect a similar interface. Check out `filetstatus` from the FiletLignux project for a solution engineered under the same philosophies as this project.
