@@ -11,4 +11,4 @@ pkill -f ".*/\.config/filetlignux/filetstatus/filetstatus $DISPLAY"
 feh --bg-tile ~/.config/filetlignux/theme/background.jpg
 
 # Launch the Window Manager
-~/.config/filetlignux/dwm/dwm
+~/.config/filetlignux/filetwm/filetwm
