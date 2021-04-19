@@ -1,5 +1,0 @@
-#!/bin/bash
-
-pactl set-sink-volume 0 '-5%'
-xsetroot -name "`pactl list sinks | grep Volume | grep -v Base | sed -e 's;.* \([0-9]*%\) .*;Volume: \1;'` ` pactl list sinks | grep Mute | sed -e 's;.*\(Mute\).*: yes;(muted);' | sed -e 's;.*\(Mute\).*: no;;'`  "
-

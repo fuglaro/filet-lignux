@@ -23,6 +23,26 @@
  *
  * To understand everything else, start reading main().
  */
+
+/* This is a minimal fork to dwm, aiming to be smaller, simpler
+ * and friendlier.
+ *
+ * Changes to dwm focus on default behaviour being more familiar
+ * to users of less-leet window managers, while still supporting
+ * productivity boosting behaviours. Consider this like a gateway
+ * drug to the beauty of dwm - friendly to noob and leet alike.
+ * Main differences in dwm fork:
+ * - There is only a tiled layout but windows will launch in floating mode.
+ * - Monitor association of windows based on floating mode position.
+ * - Fullscreen mode for windows replaces the monocle layout.
+ * - Less daunting bar arrangement.
+ * - Changed bindings to be closer to less-leet window managers.
+ *     * Alt+Tab combos raise windows temporarily, and then zoom on release.
+ * - Mouse resize movements triggered by keys not buttons.
+ * - Mouse resize controls at the edge of windows.
+ */
+
+#include <dlfcn.h>
 #include <errno.h>
 #include <signal.h>
 #include <stdio.h>
@@ -35,18 +55,21 @@
 #include <X11/extensions/Xrandr.h>
 #include <X11/keysym.h>
 #include <X11/Xatom.h>
+#include <X11/XF86keysym.h>
 #include <X11/Xft/Xft.h>
 #include <X11/Xlib.h>
 #include <X11/Xproto.h>
 #include <X11/Xutil.h>
 
 /* basic macros */
-#define MAX(A, B) ((A) > (B) ? (A) : (B))
-#define MIN(A, B) ((A) < (B) ? (A) : (B))
+#define LOADCONF(P) ((*(void **)(&conf)) = dlsym(dlopen(P, RTLD_LAZY), "_"))
+                     /* leave the loaded lib in memory until process cleanup */
 #define KEYMASK(mask) (mask & (ShiftMask|ControlMask|Mod1Mask|Mod4Mask))
 #define KCODE(keysym) ((KeyCode)(XKeysymToKeycode(dpy, keysym)))
 #define ISVISIBLE(C) ((C->tags & tagset))
 #define LENGTH(X) (sizeof X / sizeof X[0])
+#define MAX(A, B) ((A) > (B) ? (A) : (B))
+#define MIN(A, B) ((A) < (B) ? (A) : (B))
 #define MOUSEINF(W,X,Y,M) (XQueryPointer(dpy,root,&dwin,&W,&X,&Y,&di,&di,&M))
 #define PROPEDIT(P, C, A) {XChangeProperty(dpy, root, netatom[A], XA_WINDOW,\
 	32, P, (unsigned char *) &(C->win), 1);}
@@ -85,7 +108,7 @@
 	: (TAGS << I) | (TAGS >> (LENGTH(tags) - I)))
 
 /* enums */
-enum { fg, bg, mark, bdr, selbdr }; /* colors */
+enum { fg, bg, mark, bdr, selbdr, colslen }; /* colors */
 enum { NetSupported, NetWMName, NetWMState, NetWMCheck, /* EWMH atoms */
        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
        NetWMWindowTypeDialog, NetClientList, NetCliStack, NetLast };
@@ -251,20 +274,150 @@ static Client *clients;
 static Client *sel;
 static Window root, wmcheckwin;
 static Cursor curpoint, cursize;
+static XftColor cols[colslen];
+static XftFont *xfont;
 /* dummy variables */
 static int di;
 static unsigned long dl;
 static unsigned int dui;
 static Window dwin;
-static XftFont *xfont;
 
-/* configuration, allows nested code to access above variables */
-#include "config.h"
+/***********************
+   Configuration Section
+   Allows config plugins to change config variables
+************************/
 
-/* variables dependent on configuration */
-static XftColor cols[LENGTH(colors)];
-/* compile-time check if all tags fit into an unsigned int bit array. */
-struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
+/* appearance */
+unsigned int borderpx  = 1; /* border pixel width of windows */
+char lsymbol[] = ">"; /* launcher symbol */
+unsigned int snap = 8; /* edge snap pixel distance */
+int topbar = 1; /* 0 means bottom bar */
+Time zenmode = 3; /* if set, delays showing rapid sequences of client triggered
+                     window title changes until the next natural refresh. */
+char *font = "monospace:size=8";
+/* colors (must be exactly five colors) */
+                  /*      fg,        bg, highlight,    border, sel-border */
+char *colors[] = { "#dddddd", "#111111", "#335577", "#555555", "#dd4422" };
+
+/* virtual workspaces (must be less than 33 *usually*) */
+char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+
+/* monitor layout
+   Set mons to the number of monitors you want supported.
+   Initialise with {0} for autodetection of monitors,
+   otherwise set the position and size ({x,y,w,h}).
+   The first monitor will be the primary monitor and have the bar.
+   e.g:
+Monitor mons[] = {
+	{2420, 0, 1020, 1080},
+	{1920, 0, 500, 1080},
+	{3440, 0, 400,  1080}
+};
+   or to autodetect up to 3 monitors:
+Monitor mons[] = {{0}, {0}, {0}};
+*/
+Monitor mons[] = {{0}};
+/* factor of main area size [0.05..0.95] (for each monitor) */
+float mfact[] = {0.6};
+/* number of clients in main area (for each monitor) */
+int nmain[] = {1};
+
+/* commands */
+char *launcher[] = {
+	"launcher", "monospace:size=8", "#dddddd", "#111111", "#335577", NULL };
+char *termcmd[] = { "st", NULL };
+#define VOLCMD(A) ("amixer -q set Master "#A"; xsetroot -name \"Volume: "\
+	"$(amixer sget Master | awk -F'[][]' '/dB/ { print $2, $6 }')\"")
+char *upvol[] = { "bash", "-c", VOLCMD("5%+"), NULL };
+char *downvol[] = { "bash", "-c", VOLCMD("5%-"), NULL };
+char *mutevol[] = { "bash", "-c", VOLCMD("toggle"), NULL };
+char *ssleep[]  = {
+	"bash", "-c", "killall slock; slock systemctl suspend -i", NULL };
+#define DIMCMD(A) ("xbacklight "#A" 5; xsetroot -name \"Brightness: "\
+	"$(xbacklight | cut -d. -f1)%\"")
+char *dimup[]   = { "bash", "-c", DIMCMD("-inc"), NULL };
+char *dimdown[] = { "bash", "-c", DIMCMD("-dec"), NULL };
+char *helpcmd[] = { "st", "-g66x21", "-t", "FiletLignux Controls",
+"-e", "bash", "-c", "printf 'FiletLignux Controls\n\
+                   Win+Tab: launcher\n\
+             Win+Shift+Tab: terminal\n\
+                 Win+Space: move window\n\
+             Win+Alt+Space: resize window\n\
+            Win+Ctrl+Space: tile window\n\
+                 Alt+Enter: fullscreen window\n\
+                 Win+Enter: pin window\n\
+             Win+Alt+Enter: raise window\n\
+           (Shift+)Alt+Tab: switch window, and raise\n\
+               Win+Up/Down: switch window\n\
+            Win+Left/Right: switch workspace\n\
+      Win+Shift+Left/Right: switch workspace with window\n\
+                 Win+[1-9]: switch workspace\n\
+           Win+Shift+[1-9]: move window to workspace\n\
+                 Alt+[1-9]: add window to workspace\n\
+                     Alt+0: add window to all workspaces\n\
+                    Alt+F4: close window\n\
+                    Win+F4: sleep\n\
+         Shift+Ctrl+Alt+F4: quit\n'; read -s -n 1", NULL };
+
+/* keyboard shortcut definitions */
+#define AltMask Mod1Mask
+#define WinMask Mod4Mask
+#define TAGKEYS(KEY,TAG) \
+	{                  WinMask, KEY, view, {.ui = 1 << TAG} }, \
+	{        WinMask|ShiftMask, KEY, tag, {.ui = 1 << TAG} }, \
+	{                  AltMask, KEY, toggletag, {.ui = 1 << TAG} },
+
+KeySym stackrelease = XK_Alt_L;
+Key keys[] = {
+	/*               modifier / key, function / argument */
+	{               WinMask, XK_Tab, spawn, {.v = launcher } },
+	{     WinMask|ShiftMask, XK_Tab, spawn, {.v = termcmd } },
+	{             WinMask, XK_space, grabresize, {.i = DragMove } },
+	{     WinMask|AltMask, XK_space, grabresize, {.i = DragSize } },
+	{ WinMask|ControlMask, XK_space, togglefloating, {0} },
+	{            AltMask, XK_Return, togglefullscreen, {0} },
+	{            WinMask, XK_Return, pin, {0} },
+	{    WinMask|AltMask, XK_Return, zoom, {0} },
+	{               AltMask, XK_Tab, grabstack, {.i = +1 } },
+	{     AltMask|ShiftMask, XK_Tab, grabstack, {.i = -1 } },
+	{                WinMask, XK_Up, focusstack, {.i = -1 } },
+	{              WinMask, XK_Down, focusstack, {.i = +1 } },
+	{              WinMask, XK_Left, viewshift, {.i = -1 } },
+	{             WinMask, XK_Right, viewshift, {.i = +1 } },
+	{    WinMask|ShiftMask, XK_Left, viewtagshift, {.i = -1 } },
+	{   WinMask|ShiftMask, XK_Right, viewtagshift, {.i = +1 } },
+	TAGKEYS( XK_1, 0)
+	TAGKEYS( XK_2, 1)
+	TAGKEYS( XK_3, 2)
+	TAGKEYS( XK_4, 3)
+	TAGKEYS( XK_5, 4)
+	TAGKEYS( XK_6, 5)
+	TAGKEYS( XK_7, 6)
+	TAGKEYS( XK_8, 7)
+	TAGKEYS( XK_9, 8)
+	{                 AltMask, XK_0, tag, {.ui = ~0 } },
+	{                AltMask, XK_F4, killclient, {0} },
+	{                WinMask, XK_F4, spawn, {.v = ssleep } },
+	{ AltMask|ControlMask|ShiftMask, XK_F4, quit, {0} },
+	{    0, XF86XK_AudioLowerVolume, spawn, {.v = downvol } },
+	{           0, XF86XK_AudioMute, spawn, {.v = mutevol } },
+	{    0, XF86XK_AudioRaiseVolume, spawn, {.v = upvol } },
+	{               0, XF86XK_Sleep, spawn, {.v = ssleep } },
+	{     0, XF86XK_MonBrightnessUp, spawn, {.v = dimup } },
+	{   0, XF86XK_MonBrightnessDown, spawn, {.v = dimdown } },
+};
+
+/* bar actions */
+Button buttons[] = {
+	/* click,      button, function / argument */
+	{ ClkLauncher, Button1, spawn, {.v = launcher } },
+	{ ClkWinTitle, Button1, focusstack, {.i = +1 } },
+	{ ClkWinTitle, Button3, focusstack, {.i = -1 } },
+	{ ClkStatus,   Button1, spawn, {.v = helpcmd } },
+	{ ClkTagBar,   Button1, view, {0} },
+	{ ClkTagBar,   Button3, tag, {0} },
+};
+
 
 void
 arrange(void)
@@ -1208,9 +1361,19 @@ setup(void)
 	unsigned char xi[XIMaskLen(XI_RawMotion)] = { 0 };
 	XIEventMask evm;
 	Atom utf8string;
+	void (*conf)(void);
 
 	/* register handler to clean up any zombies immediately */
 	sigchld(0);
+
+	/* Load configs.
+	   First load the distribution's config plugin, if one exists.
+	   Then load the user's config plugin, if they have one.
+	   Leave the current working directory in the user's home dir. */
+	if (LOADCONF("/etc/config/filetwmconf.so"))
+		conf();
+	if (!chdir(getenv("HOME")) && LOADCONF(".config/filetwmconf.so"))
+		conf();
 
 	/* init screen and display */
 	XSetErrorHandler(xerror);
@@ -1257,7 +1420,7 @@ setup(void)
 	cursize = XCreateFontCursor(dpy, XC_sizing);
 	XDefineCursor(dpy, root, curpoint);
 	/* init colors */
-	for (i = 0; i < LENGTH(colors); i++)
+	for (i = 0; i < colslen; i++)
 		if (!XftColorAllocName(dpy, DefaultVisual(dpy, screen),
 				DefaultColormap(dpy, screen), colors[i], &cols[i]))
 			die("error, cannot allocate colors.\n");

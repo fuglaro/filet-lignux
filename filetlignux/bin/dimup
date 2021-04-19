@@ -1,6 +1,0 @@
-#!/bin/bash
-
-xbacklight -inc 5
-
-xsetroot -name "Brightness: $(xbacklight -get | cut -d. -f1)%  "
-

@@ -2,7 +2,7 @@
 
 A developer's linux configuration - a palatable lean slice.
 
-Inspired by dwm, and largely forked from it. This project explores minimalism while still providing the full power of a desktop environment. It is not for everyone, and it is the result of strong opinions, such as:
+This project explores minimalism while still providing the full power of a desktop environment. It is not for everyone, and it is the result of strong opinions, such as:
 * **Complexity must justify itself**.
 * Lightweight is better than heavyweight.
 * Select your dependencies wisely: they are complexity, but not using them, or using the wrong ones, can lead to worse complexity.
@@ -13,21 +13,6 @@ Inspired by dwm, and largely forked from it. This project explores minimalism wh
 * Fix where fixes belong - don't work around bugs in other applications, contribute to them, or make something better.
 * Improvement via reduction is sometimes what a project desperately needs, because we do so tend to just add. (https://www.theregister.com/2021/04/09/people_complicate_things/)
 
-## X11 vs Wayland
-
-This is built on X11, not Wayland, for no other reason than timing. Shortly after this project was started, NVIDIA support for Wayland was announced. This project will not include Wayland support due to the inevitable complexities of concurrently supporting multiple interfaces. When the timing is right, this will fork into a new project which can move in the direction of Wayland.
-
-## DWM fork
-
-The heart of this project is a fork of dwm. Dwm is breathtakingly beautiful. This started as a programming exercise to see if I could take something already very well placed in terms of simplicity and elegance, and make it even simpler, inside and out, without significantly moving away from powerful features. It ended up steering in a significantly different direction largely from the opinions stated above. I would best describe it now as dwm with a clean and simple user interface that is welcoming to users familiar with tradition window managers, whilst still holding on to powerful features.
-
-Significant changes:
-* More familiar and standard window manager bar.
-* Mouse and trackpad support for window movement, resizing and tile layout adjustment.
-* Bar focus when mouse hits edge - essential when working with windows that capture mouse and keyboard like with remote desktop applications.
-* Simpler monitor support - unified stack and workspaces across all monitors.
-* Unified tiling, fullscreen and floating modes.
-* A whole chunk less code.
 
 ## Installation
 

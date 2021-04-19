@@ -12,7 +12,7 @@ mkdir -p ~/.config
 rsync -av --delete filetlignux/ ~/.config/filetlignux
 
 # Build everything that needs to be compiled.
-for build in dmenu dwm st flstatus xrootname; do
+for build in dmenu filetwm st filetstatus; do
 	printf "\n\nBuilding ${build}...\n\n"
 	cd ~/.config/filetlignux/$build/; make; cd -
 done
