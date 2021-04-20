@@ -1,5 +1,8 @@
 /* See LICENSE file for copyright and license details.
  *
+ * This is a minimal fork to dwm, aiming to be smaller, simpler
+ * and friendlier.
+ *
  * Filet-Lignux's dynamic window manager is designed like any other X client.
  * It is driven through handling X events. In contrast to other X clients,
  * a window manager selects for SubstructureRedirectMask on the root window,
@@ -320,27 +323,8 @@ char *ssleep[]  = {
 	"$(xbacklight | cut -d. -f1)%\"")
 char *dimup[]   = { "bash", "-c", DIMCMD("-inc"), NULL };
 char *dimdown[] = { "bash", "-c", DIMCMD("-dec"), NULL };
-char *helpcmd[] = { "st", "-g66x21", "-t", "FiletLignux Controls",
-"-e", "bash", "-c", "printf 'FiletLignux Controls\n\
-                   Win+Tab: launcher\n\
-             Win+Shift+Tab: terminal\n\
-                 Win+Space: move window\n\
-             Win+Alt+Space: resize window\n\
-            Win+Ctrl+Space: tile window\n\
-                 Alt+Enter: fullscreen window\n\
-                 Win+Enter: pin window\n\
-             Win+Alt+Enter: raise window\n\
-           (Shift+)Alt+Tab: switch window, and raise\n\
-               Win+Up/Down: switch window\n\
-            Win+Left/Right: switch workspace\n\
-      Win+Shift+Left/Right: switch workspace with window\n\
-                 Win+[1-9]: switch workspace\n\
-           Win+Shift+[1-9]: move window to workspace\n\
-                 Alt+[1-9]: add window to workspace\n\
-                     Alt+0: add window to all workspaces\n\
-                    Alt+F4: close window\n\
-                    Win+F4: sleep\n\
-         Shift+Ctrl+Alt+F4: quit\n'; read -s -n 1", NULL };
+char *helpcmd[] = { "st", "-t", "Help", "-e", "bash", "-c",
+	"man filetwm || man -l ~/.config/filetwmconf.1", NULL };
 
 /* keyboard shortcut definitions */
 #define AltMask Mod1Mask

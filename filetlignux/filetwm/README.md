@@ -78,6 +78,8 @@ Save it as `filetwmconf.c`, then build and install it to the user config locatio
 
 Many other configurations can be made via this plugin system and supported options include: colors, layout, borders, keyboard commands, launcher command, monitors, and top-bar actions. Any non-static global variable in the `filetwm.c` source file can be changed in this way. Please see the Configuraton Section.
 
+If you customise the user config plugin to change the behaviours around documented things like keyboard shortcuts, you can update the Help action by creating a custom man page at `~/.config/filetwmconf.1`.
+
 ### Status bar text
 To configure the status text on the top-bar, set the name of the Root Window with a tool like `xsetroot`. There are many examples configured for other Window Managers that respect a similar interface. Check out `filetstatus` from the FiletLignux project for a solution engineered under the same philosophies as this project.
 
