@@ -44,6 +44,9 @@ In order to build dwm you need the Xlib header files.
 make
 ```
 
+## Dependencies
+amixer, xsetroot, bash, slock, awk, systemctl (suspend), xbacklight, man, st
+
 ## Running
 
 There are a number of ways to launch a Window Manager (https://wiki.archlinux.org/index.php/Xinit), all of which apply to filetwm. A simple way is to switch to a virtual console and then launch filetwm with:
@@ -78,4 +81,14 @@ Many other configurations can be made via this plugin system and supported optio
 ### Status bar text
 To configure the status text on the top-bar, set the name of the Root Window with a tool like `xsetroot`. There are many examples configured for other Window Managers that respect a similar interface. Check out `filetstatus` from the FiletLignux project for a solution engineered under the same philosophies as this project.
 
+# Thanks to, grateful forks, and contributions
 
+We stand on the shoulders of giants. They own this, far more than I do.
+
+* https://archlinux.org/
+* https://github.com
+* https://github.com/torvalds/linux
+* https://www.x.org/wiki/XorgFoundation
+* https://suckless.org/
+* https://www.texturex.com/fractal-textures/fractal-design-picture-wallpaper-stock-art-image-definition-free-neuron-chaos-fractal-fracture-broken-synapse-texture/
+* https://keithp.com/blogs/Cursor_tracking/

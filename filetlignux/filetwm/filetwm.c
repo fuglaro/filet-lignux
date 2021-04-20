@@ -15,7 +15,7 @@
  * list. Each client contains a bit array to indicate the tags (workspaces)
  * of a client.
  *
- * Keyboard shortcuts are organized as arrays and defined in config.h.
+ * Keyboard shortcuts are organized as arrays.
  *
  * Mouse motion tracking governs window focus, along with
  * a click-to-raise behavior. Mouse motion is stateful and supports different
@@ -24,23 +24,6 @@
  * To understand everything else, start reading main().
  */
 
-/* This is a minimal fork to dwm, aiming to be smaller, simpler
- * and friendlier.
- *
- * Changes to dwm focus on default behaviour being more familiar
- * to users of less-leet window managers, while still supporting
- * productivity boosting behaviours. Consider this like a gateway
- * drug to the beauty of dwm - friendly to noob and leet alike.
- * Main differences in dwm fork:
- * - There is only a tiled layout but windows will launch in floating mode.
- * - Monitor association of windows based on floating mode position.
- * - Fullscreen mode for windows replaces the monocle layout.
- * - Less daunting bar arrangement.
- * - Changed bindings to be closer to less-leet window managers.
- *     * Alt+Tab combos raise windows temporarily, and then zoom on release.
- * - Mouse resize movements triggered by keys not buttons.
- * - Mouse resize controls at the edge of windows.
- */
 
 #include <dlfcn.h>
 #include <errno.h>
@@ -418,6 +401,8 @@ Button buttons[] = {
 	{ ClkTagBar,   Button3, tag, {0} },
 };
 
+/* End Configuration Section
+****************************/
 
 void
 arrange(void)
@@ -1429,7 +1414,7 @@ setup(void)
 	XChangeProperty(dpy, wmcheckwin, netatom[NetWMCheck], XA_WINDOW, 32,
 		PropModeReplace, (unsigned char *) &wmcheckwin, 1);
 	XChangeProperty(dpy, wmcheckwin, netatom[NetWMName], utf8string, 8,
-		PropModeReplace, (unsigned char *) "dwm", 3);
+		PropModeReplace, (unsigned char *) "filetwm", 3);
 	XChangeProperty(dpy, root, netatom[NetWMCheck], XA_WINDOW, 32,
 		PropModeReplace, (unsigned char *) &wmcheckwin, 1);
 	/* EWMH support per view */
@@ -1444,7 +1429,7 @@ setup(void)
 			.background_pixmap = ParentRelative,
 			.event_mask = ButtonPressMask|ExposureMask});
 	XMapRaised(dpy, barwin);
-	XSetClassHint(dpy, barwin, &(XClassHint){"dwm", "dwm"});
+	XSetClassHint(dpy, barwin, &(XClassHint){"filetwm", "filetwm"});
 	updatestatus();
 	/* select events */
 	XSelectInput(dpy, root, SubstructureRedirectMask|SubstructureNotifyMask
@@ -1518,7 +1503,7 @@ spawn(const Arg *arg)
 			close(ConnectionNumber(dpy));
 		setsid();
 		execvp(((char **)arg->v)[0], (char **)arg->v);
-		fprintf(stderr, "dwm: execvp %s", ((char **)arg->v)[0]);
+		fprintf(stderr, "filetwm: execvp %s", ((char **)arg->v)[0]);
 		perror(" failed");
 		exit(EXIT_SUCCESS);
 	}
@@ -1779,8 +1764,8 @@ xerror(Display *dpy, XErrorEvent *ee)
 		return 0;
 	else if (ee->request_code == X_ChangeWindowAttributes
 	&& ee->error_code == BadAccess)
-		die("dwm: another window manager may already be running.\n");
-	fprintf(stderr, "dwm: fatal error: request code=%d, error code=%d\n",
+		die("filetwm: another window manager may already be running.\n");
+	fprintf(stderr, "filetwm: fatal error: request code=%d, error code=%d\n",
 		ee->request_code, ee->error_code);
 	return xerrorxlib(dpy, ee); /* may call exit */
 }
@@ -1801,11 +1786,11 @@ int
 main(int argc, char *argv[])
 {
 	if (argc == 2 && !strcmp("-v", argv[1]))
-		die("dwm-"VERSION"\n");
+		die("filetwm-"VERSION"\n");
 	else if (argc != 1)
-		die("usage: dwm [-v]\n");
+		die("usage: filetwm [-v]\n");
 	if (!(dpy = XOpenDisplay(NULL)))
-		die("dwm: cannot open display.\n");
+		die("filetwm: cannot open display.\n");
 	setup();
 	scan();
 	run();

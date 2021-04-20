@@ -38,6 +38,7 @@ We stand on the shoulders of giants. They own this, far more than I do.
 * https://archlinux.org/
 * https://github.com
 * https://github.com/torvalds/linux
+* https://www.x.org/wiki/XorgFoundation
 * https://dwm.suckless.org
 * https://st.suckless.org
 * https://st.suckless.org/patches/nordtheme

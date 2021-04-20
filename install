@@ -2,14 +2,15 @@
 
 # Check dependencies
 printf "\n\nChecking dependencies...\n\n"
-for dep in slock rsync feh xbacklight firefox nnn mupdf vim make pkg-config gcc; do
+for dep in slock rsync feh xbacklight xsetroot firefox nnn mupdf vim make \
+pkg-config gcc; do
 	command -v $dep || (echo "need $dep"; exit 1)
 done
 
 # Install base code.
 printf "\n\nInstalling codebase...\n\n"
 mkdir -p ~/.config
-rsync -av --delete filetlignux/ ~/.config/filetlignux
+rsync -av --delete --exclude cache filetlignux/ ~/.config/filetlignux
 
 # Build everything that needs to be compiled.
 for build in dmenu filetwm st filetstatus; do
@@ -24,7 +25,7 @@ find ~/.config/filetlignux/fonts/*/fonts -type f | \
 
 # Installing home dir config files.
 printf "\n\nLinking HOME dir config files...\n\n"
-for file in $(find ~/.config/filetlignux/installs/ -type f); do
+for file in $(find ~/.config/filetlignux/installs/ -type f,l); do
 	dest=$(echo $file | sed -e 's:^.*/filetlignux/installs/::')
 	printf "$dest\n"
 	if [[ -L ~/$dest && `readlink ~/$dest` \
