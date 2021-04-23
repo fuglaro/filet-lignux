@@ -1,19 +1,16 @@
-# filetwm - dynamic window manager (filet-lignux fork of dwm)
-# See LICENSE file for copyright and license details.
 
-VERSION = filetwm-8.0
+# Builds filetwm from its git repository
 
-INCS = -I/usr/X11R6/include -I/usr/include/freetype2
+all: filet-wm/filetwm
 
-all: filetwm
+cache:
+	mkdir cache
 
-.c.o:
-	cc -c -std=c99 -pedantic -Wall -Os ${INCS} -DVERSION=\"${VERSION}\" $<
+cache/filet-wm: cache
+	git clone https://github.com/fuglaro/filet-wm.git cache/filet-wm
 
-filetwm: filetwm.o
-	cc -rdynamic -o $@ $? -lX11 -lXi -lfontconfig -lXft -lXrandr -ldl
+filet-wm/filetwm: cache/filet-wm
+	git -C cache/filet-wm pull
+	make -C cache/filet-wm
 
-clean:
-	rm -f filetwm filetwm.o
-
-.PHONY: all clean
+.PHONY: all
