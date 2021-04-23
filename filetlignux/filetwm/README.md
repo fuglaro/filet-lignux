@@ -22,14 +22,14 @@ The heart of this project is a fork of dwm. This started as a programming exerci
 Significant changes:
 * Unified tiling, fullscreen and floating modes.
 * Simpler monitor support - unified stack and workspaces.
-* Focus follows mouse with click-to-raise.
+* Focus follows mouse and clicks raise.
 * Mouse support for window movement, resizing, and tile layout adjustment.
 * More familiar Alt+Tab behavior (restack on release).
 * More familiar bar layout with autofocus.
 * Dedicated launcher button.
 * Support for pinning windows.
 * Zen-mode for limiting bar updates.
-* More easily customise with post-complile plugins.
+* More easily customise with post-compile configuration plugins.
 * A whole tonne less code.
 
 ## X11 vs Wayland
