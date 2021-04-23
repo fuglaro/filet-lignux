@@ -63,22 +63,160 @@ Customise filetwm by making a '.so' file plugin and installing it to one of file
 * User config: `~/.config/filetwmconf.so`
 * System config: `/etc/config/filetwmconf.so`
 
-Here is an example config that changes the font size of the top-bar:
+Here is an example config that changes the font size and customises the launcher command:
 ```c
-/* Source config file for filetwm's config plugin.
-Build and install config:
+/* filetwmconf.c: Source config file for filetwm's config plugin.
+Build and install config with:
 cc -shared -fPIC filetwmconf.c -o ~/.config/filetwmconf.so
 */
+#include <unistd.h>
+#define S(T, N, V) extern T N; N = V;
+#define P(T, N, ...) extern T* N;static T _##N[]=__VA_ARGS__;N=_##N
 
-void _() {
-    extern char *font; font = "monospace:bold:size=5";
+void config(void) {
+    S(char*, font, "monospane:bold:size=5");
+    P(char*, launcher,
+    { "launcher", "monospace:size=5", "#dddddd", "#111111", "#335577", NULL });
 }
 ```
 Save it as `filetwmconf.c`, then build and install it to the user config location with the command in the comment of the file.
 
-Many other configurations can be made via this plugin system and supported options include: colors, layout, borders, keyboard commands, launcher command, monitors, and top-bar actions. Any non-static global variable in the `filetwm.c` source file can be changed in this way. Please see the Configuraton Section.
+Many other configurations can be made via this plugin system and supported options include: colors, layout, borders, keyboard commands, launcher command, monitors, and top-bar actions. Any non-static global variable in the `filetwm.c` source file can be changed in this way. Please see the defaultconfig method in the code.
 
 If you customise the user config plugin to change the behaviours around documented things like keyboard shortcuts, you can update the Help action by creating a custom man page at `~/.config/filetwmconf.1`.
+
+### Advanced config example
+The following config exemplifies changes to every option:
+```c
+/* filetwmconf.c: Source config file for filetwm's config plugin.
+Build and install config with:
+cc -shared -fPIC filetwmconf.c -o ~/.config/filetwmconf.so
+*/
+#include <unistd.h>
+#include <X11/keysym.h>
+#include <X11/XF86keysym.h>
+#include <X11/Xlib.h>
+#define LEN(X) (sizeof X / sizeof X[0])
+#define S(T, N, V) extern T N; N = V;
+#define V(T, N, L, ...) extern T* N;static T _##N[]=__VA_ARGS__;N=_##N L
+#define P(T, N, ...) V(T,N,,__VA_ARGS__;)
+#define A(T, N, ...) V(T,N,;extern int N##len; N##len = LEN(_##N),__VA_ARGS__;)
+enum { ClkLauncher, ClkWinTitle, ClkStatus, ClkTagBar, ClkLast };
+enum { DragMove, DragSize, DragTile, DragCheck, DragNone };
+typedef struct { int mx, my, mw, mh; } Monitor;
+typedef union {
+  int i;
+  unsigned int ui;
+  const void *v;
+} Arg;
+typedef struct {
+  unsigned int click;
+  unsigned int button;
+  void (*func)(const Arg *arg);
+  const Arg arg;
+} Button;
+typedef struct {
+  unsigned int mod;
+  KeySym key;
+  void (*func)(const Arg *);
+  const Arg arg;
+} Key;
+
+/* callable actions */
+void focusstack(const Arg *arg);
+void grabresize(const Arg *arg);
+void grabstack(const Arg *arg);
+void killclient(const Arg *arg);
+void pin(const Arg *arg);
+void quit(const Arg *arg);
+void spawn(const Arg *arg);
+void tag(const Arg *arg);
+void togglefloating(const Arg *arg);
+void togglefullscreen(const Arg *arg);
+void toggletag(const Arg *arg);
+void view(const Arg *arg);
+void viewshift(const Arg *arg);
+void viewtagshift(const Arg *arg);
+void zoom(const Arg *arg);
+
+void config(void) {
+    /* appearance */
+    S(int, borderpx, 5); /* border pixel width of windows */
+    S(int, snap, 32); /* edge snap pixel distance */
+    S(int, topbar, 0); /* 0 means bottom bar */
+    S(int, zenmode, 0); /* ignores showing rapid client name changes (seconds) */
+    S(char*, lsymbol, "Start>"); /* launcher symbol */
+    S(char*, font, "size=10");
+    P(char*, colors, { "#ddffdd", "#335533", "#338877", "#558855", "#dd6622" }); /* colors (must be five colors: fg, bg, highlight, border, sel-border) */
+    A(char*, tags, { "[ ]", "[ ]", "[ ]", "[ ]"}); /* virtual workspaces (must be 32 or less, *usually*) */
+    A(Monitor, mons, {{0}, {0}, {0}});
+    P(float, mfact, {0.5, 0.75, 0.5}); /* factor of main area size [0.05..0.95] (for each monitor) */
+    P(int, nmain, {4, 1, 4}); /* number of clients in main area (for each monitor) */
+
+  /* commands */
+    P(char*, launcher, { "dmenu_run", "-fn", "size=10", "-b", "-nf", "#ddffdd", "-sf", "#ddffdd", "-nb", "#335533", "-sb", "#338877", NULL });
+    P(char*, terminal, { "xterm", NULL });
+    P(char*, upvol, { "amixer", "-q", "set", "Master", "10%+", NULL });
+    P(char*, downvol, { "amixer", "-q", "set", "Master", "10%-", NULL });
+    P(char*, mutevol, { "amixer", "-q", "set", "Master", "toggle", NULL });
+    P(char*, suspend, { "bash", "-c", "killall slock; slock", NULL });
+    P(char*, dimup, { "xbacklight", "-inc", "5", NULL });
+    P(char*, dimdown, { "xbacklight", "-dec", "5", NULL });
+    P(char*, help, { "xterm", "-e", "bash", "-c", "man filetwm || man -l ~/.config/filetwmconf.1", NULL });
+
+    /* keyboard shortcut definitions */
+    #define AltMask Mod1Mask
+    #define WinMask Mod4Mask
+    #define TK(KEY) { WinMask, XK_##KEY, view, {.ui = 1 << (KEY - 1)} }, \
+    {       WinMask|ShiftMask, XK_##KEY, tag, {.ui = 1 << (KEY - 1)} }, \
+    {                 AltMask, XK_##KEY, toggletag, {.ui = 1 << (KEY - 1)} },
+    /* Alt+Tab style behaviour key release */
+    S(KeySym, stackrelease, XK_Alt_L);
+    A(Key, keys, {
+    /*               modifier / key, function / argument */
+    {           ControlMask, XK_Tab, spawn, {.v = &launcher } },
+    {     WinMask|ShiftMask, XK_Tab, spawn, {.v = &terminal } },
+    {             WinMask, XK_space, grabresize, {.i = DragMove } },
+    {     WinMask|AltMask, XK_space, grabresize, {.i = DragSize } },
+    { WinMask|ControlMask, XK_space, togglefloating, {0} },
+    {            AltMask, XK_Return, togglefullscreen, {0} },
+    {            WinMask, XK_Return, pin, {0} },
+    {    WinMask|AltMask, XK_Return, zoom, {0} },
+    {               AltMask, XK_Tab, grabstack, {.i = +1 } },
+    {     AltMask|ShiftMask, XK_Tab, grabstack, {.i = -1 } },
+    {                WinMask, XK_Up, focusstack, {.i = -1 } },
+    {              WinMask, XK_Down, focusstack, {.i = +1 } },
+    {              WinMask, XK_Left, viewshift, {.i = -1 } },
+    {             WinMask, XK_Right, viewshift, {.i = +1 } },
+    {    WinMask|ShiftMask, XK_Left, viewtagshift, {.i = -1 } },
+    {   WinMask|ShiftMask, XK_Right, viewtagshift, {.i = +1 } },
+    {                 AltMask, XK_0, tag, {.ui = ~0 } },
+    {                AltMask, XK_F4, killclient, {0} },
+    {                WinMask, XK_F4, spawn, {.v = &suspend } },
+    { AltMask|ControlMask|ShiftMask, XK_F4, quit, {0} },
+    {    0, XF86XK_AudioLowerVolume, spawn, {.v = &downvol } },
+    {           0, XF86XK_AudioMute, spawn, {.v = &mutevol } },
+    {    0, XF86XK_AudioRaiseVolume, spawn, {.v = &upvol } },
+    {               0, XF86XK_Sleep, spawn, {.v = &suspend } },
+    {     0, XF86XK_MonBrightnessUp, spawn, {.v = &dimup } },
+    {   0, XF86XK_MonBrightnessDown, spawn, {.v = &dimdown } },
+    TK(1) TK(2) TK(3) TK(4) TK(5) TK(6) TK(7) TK(8) TK(9)
+  });
+
+  /* bar actions */
+  A(Button, buttons, {
+    /* click,      button, function / argument */
+    { ClkLauncher, Button1, spawn, {.v = &launcher } },
+    { ClkWinTitle, Button1, focusstack, {.i = +1 } },
+    { ClkWinTitle, Button3, focusstack, {.i = -1 } },
+    { ClkStatus,   Button1, spawn, {.v = &help } },
+    { ClkStatus,   Button2, spawn, {.v = &help } },
+    { ClkStatus,   Button3, spawn, {.v = &help } },
+    { ClkTagBar,   Button1, view, {0} },
+    { ClkTagBar,   Button3, tag, {0} },
+  });
+}
+```
 
 ### Status bar text
 To configure the status text on the top-bar, set the name of the Root Window with a tool like `xsetroot`. There are many examples configured for other Window Managers that respect a similar interface. Check out `filetstatus` from the FiletLignux project for a solution engineered under the same philosophies as this project.

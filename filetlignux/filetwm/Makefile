@@ -1,39 +1,19 @@
-# filetwm - dynamic window manager (filet-lignux fork)
+# filetwm - dynamic window manager (filet-lignux fork of dwm)
 # See LICENSE file for copyright and license details.
 
-# version
 VERSION = filetwm-8.0
 
-# Customize below to fit your system
-# includes and libs
 INCS = -I/usr/X11R6/include -I/usr/include/freetype2
-LDFLAGS = -L/usr/X11R6/lib -lX11 -lXi -lfontconfig -lXft -lXrandr -ldl
 
-# flags
-CPPFLAGS = -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L -DVERSION=\"${VERSION}\"
-CFLAGS = -std=c99 -pedantic -Wall -Os ${INCS} ${CPPFLAGS}
-
-# compiler and linker
-CC = cc
-
-SRC = filetwm.c
-OBJ = ${SRC:.c=.o}
-
-all: options filetwm
-
-options:
-	@echo filetwm build options:
-	@echo "CFLAGS   = ${CFLAGS}"
-	@echo "LDFLAGS  = ${LDFLAGS}"
-	@echo "CC       = ${CC}"
+all: filetwm
 
 .c.o:
-	${CC} -c ${CFLAGS} $<
+	cc -c -std=c99 -pedantic -Wall -Os ${INCS} -DVERSION=\"${VERSION}\" $<
 
-filetwm: ${OBJ}
-	${CC} -rdynamic -o $@ ${OBJ} ${LDFLAGS}
+filetwm: filetwm.o
+	cc -rdynamic -o $@ $? -lX11 -lXi -lfontconfig -lXft -lXrandr -ldl
 
 clean:
-	rm -f filetwm ${OBJ}
+	rm -f filetwm filetwm.o
 
-.PHONY: all options clean
+.PHONY: all clean

@@ -1,6 +1,6 @@
 [Desktop Entry]
 Encoding=UTF-8
-Name=filet lignux
+Name=FiletLignux
 Comment=Lean and palatable
 Exec=~/.config/filetlignux/launch
 Type=XSession

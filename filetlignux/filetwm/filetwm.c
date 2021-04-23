@@ -27,7 +27,6 @@
  * To understand everything else, start reading main().
  */
 
-
 #include <dlfcn.h>
 #include <errno.h>
 #include <signal.h>
@@ -48,12 +47,11 @@
 #include <X11/Xutil.h>
 
 /* basic macros */
-#define LOADCONF(P) ((*(void **)(&conf)) = dlsym(dlopen(P, RTLD_LAZY), "_"))
+#define LOADCONF(P,C) ((*(void **)(&C)) = dlsym(dlopen(P, RTLD_LAZY), "config"))
                      /* leave the loaded lib in memory until process cleanup */
 #define KEYMASK(mask) (mask & (ShiftMask|ControlMask|Mod1Mask|Mod4Mask))
 #define KCODE(keysym) ((KeyCode)(XKeysymToKeycode(dpy, keysym)))
 #define ISVISIBLE(C) ((C->tags & tagset))
-#define LENGTH(X) (sizeof X / sizeof X[0])
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
 #define MOUSEINF(W,X,Y,M) (XQueryPointer(dpy,root,&dwin,&W,&X,&Y,&di,&di,&M))
@@ -77,7 +75,6 @@
 #define BARY (topbar ? mons->my : mons->my + WINH(mons[0]))
 #define INMON(X, Y, M)\
 	(X >= M.mx && X < M.mx + M.mw && Y >= M.my && Y < M.my + M.mh)
-#define MONLEN (sizeof mons / sizeof mons[0])
 #define MONNULL(M) (M.mx == 0 && M.my == 0 && M.mw == 0 && M.mh == 0)
 #define SETMON(M, R) {M.mx = R.x; M.my = R.y; M.mw = R.width; M.mh = R.height;}
 #define WINH(M) (&M == mons ? M.mh - BARH : M.mh)
@@ -89,9 +86,9 @@
 #define WIDTH(X) ((X)->w + 2 * (X)->bw)
 
 /* virtual desktop macros */
-#define TAGMASK ((1 << LENGTH(tags)) - 1)
-#define TAGSHIFT(TAGS, I) (I < 0 ? (TAGS >> -I) | (TAGS << (LENGTH(tags) + I))\
-	: (TAGS << I) | (TAGS >> (LENGTH(tags) - I)))
+#define TAGMASK ((1 << tagslen) - 1)
+#define TAGSHIFT(TAGS, I) (I < 0 ? (TAGS >> -I) | (TAGS << (tagslen + I))\
+	: (TAGS << I) | (TAGS >> (tagslen - I)))
 
 /* enums */
 enum { fg, bg, mark, bdr, selbdr, colslen }; /* colors */
@@ -149,9 +146,7 @@ typedef struct {
 /* A monitor could be a connected display.
  * You can also have multiple monitors across displays if you
  * want custom windowing regions. */
-typedef struct Monitor {
-	int mx, my, mw, mh;   /* windowing region size */
-} Monitor;
+typedef struct { int mx, my, mw, mh; } Monitor; /* windowing region size */
 
 /* function declarations */
 static void arrange(void);
@@ -172,24 +167,18 @@ static void die(const char *msg);
 static void expose(XEvent *e);
 static void exthandler(XEvent *ev);
 static void focus(Client *c);
-static void focusstack(const Arg *arg);
 static Atom getatomprop(Client *c, Atom prop);
 static long getstate(Window w);
 static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 static void grabkeys(void);
-static void grabresize(const Arg *arg);
 static void grabresizeabort();
-static void grabstack(const Arg *arg);
 static void keypress(XEvent *e);
 static void keyrelease(XEvent *e);
-static void killclient(const Arg *arg);
 static void manage(Window w, XWindowAttributes *wa);
 static void mappingnotify(XEvent *e);
 static void maprequest(XEvent *e);
 static Client *nexttiled(Client *c);
-static void pin(const Arg *arg);
 static void propertynotify(XEvent *e);
-static void quit(const Arg *arg);
 static void rawmotion();
 static void resize(Client *c, int x, int y, int w, int h);
 static void resizeclient(Client *c, int x, int y, int w, int h);
@@ -203,12 +192,7 @@ static void setup(void);
 static void seturgent(Client *c, int urg);
 static void showhide(Client *c);
 static void sigchld(int unused);
-static void spawn(const Arg *arg);
-static void tag(const Arg *arg);
 static void tile(void);
-static void togglefloating(const Arg *arg);
-static void togglefullscreen(const Arg *arg);
-static void toggletag(const Arg *arg);
 static void unmanage(Client *c, int destroyed);
 static void unmapnotify(XEvent *e);
 static void updatemonitors(XEvent *e);
@@ -217,13 +201,26 @@ static void updatestatus(void);
 static void updatetitle(Client *c);
 static void updatewindowtype(Client *c);
 static void updatewmhints(Client *c);
-static void view(const Arg *arg);
-static void viewshift(const Arg *arg);
-static void viewtagshift(const Arg *arg);
 static Client *wintoclient(Window w);
 static int xerror(Display *dpy, XErrorEvent *ee);
 static int xerrordummy(Display *dpy, XErrorEvent *ee);
-static void zoom(const Arg *arg);
+
+/* function declarations callable from config plugins*/
+void focusstack(const Arg *arg);
+void grabresize(const Arg *arg);
+void grabstack(const Arg *arg);
+void killclient(const Arg *arg);
+void pin(const Arg *arg);
+void quit(const Arg *arg);
+void spawn(const Arg *arg);
+void tag(const Arg *arg);
+void togglefloating(const Arg *arg);
+void togglefullscreen(const Arg *arg);
+void toggletag(const Arg *arg);
+void view(const Arg *arg);
+void viewshift(const Arg *arg);
+void viewtagshift(const Arg *arg);
+void zoom(const Arg *arg);
 
 /* variables */
 static char stext[256];
@@ -269,121 +266,134 @@ static unsigned int dui;
 static Window dwin;
 
 /***********************
-   Configuration Section
-   Allows config plugins to change config variables
+* Configuration Section
+* Allows config plugins to change config variables.
+* The defaultconfig method has plugin compatible code but check the README
+* for the macros you need to work in the plugin.
 ************************/
 
-/* appearance */
-unsigned int borderpx  = 1; /* border pixel width of windows */
-char lsymbol[] = ">"; /* launcher symbol */
-unsigned int snap = 8; /* edge snap pixel distance */
-int topbar = 1; /* 0 means bottom bar */
-Time zenmode = 3; /* if set, delays showing rapid sequences of client triggered
-                     window title changes until the next natural refresh. */
-char *font = "monospace:size=8";
-/* colors (must be exactly five colors) */
-                  /*      fg,        bg, highlight,    border, sel-border */
-char *colors[] = { "#dddddd", "#111111", "#335577", "#555555", "#dd4422" };
+#define S(T, N, V) N = V /* compatibily for plugin-flavor macro */
+#define V(T, N, L, ...) do {static T _##N[] = __VA_ARGS__; N = _##N; L} while(0)
+#define P(T, N, ...) V(T,N,,__VA_ARGS__;)
+#define A(T, N, ...) V(T,N,N##len = (sizeof _##N/sizeof _##N[0]);,__VA_ARGS__;)
 
-/* virtual workspaces (must be less than 33 *usually*) */
-char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+/* configurable values (see defaultconfig) */
+Monitor *mons;
+char *lsymbol, *font, **colors, **tags, **launcher, **terminal, **upvol,
+	**downvol, **mutevol, **suspend, **dimup, **dimdown, **help;
+int borderpx, snap, topbar, zenmode, tagslen, monslen, *nmain, keyslen,
+	buttonslen;
+float *mfact;
+KeySym stackrelease;
+Key *keys;
+Button *buttons;
 
-/* monitor layout
-   Set mons to the number of monitors you want supported.
-   Initialise with {0} for autodetection of monitors,
-   otherwise set the position and size ({x,y,w,h}).
-   The first monitor will be the primary monitor and have the bar.
-   e.g:
-Monitor mons[] = {
-	{2420, 0, 1020, 1080},
-	{1920, 0, 500, 1080},
-	{3440, 0, 400,  1080}
-};
-   or to autodetect up to 3 monitors:
-Monitor mons[] = {{0}, {0}, {0}};
-*/
-Monitor mons[] = {{0}};
-/* factor of main area size [0.05..0.95] (for each monitor) */
-float mfact[] = {0.6};
-/* number of clients in main area (for each monitor) */
-int nmain[] = {1};
+void
+defaultconfig(void)
+{
+	/* appearance */
+	S(int, borderpx, 1); /* border pixel width of windows */
+	S(int, snap, 8); /* edge snap pixel distance */
+	S(int, topbar, 1); /* 0 means bottom bar */
+	S(int, zenmode, 3); /* ignores showing rapid client name changes (seconds) */
+	S(char*, lsymbol, ">"); /* launcher symbol */
+	S(char*, font, "monospace:size=8");
+	/* colors (must be five colors: fg, bg, highlight, border, sel-border) */
+	P(char*, colors, { "#dddddd", "#111111", "#335577", "#555555", "#dd4422" });
 
-/* commands */
-char *launcher[] = {
-	"launcher", "monospace:size=8", "#dddddd", "#111111", "#335577", NULL };
-char *termcmd[] = { "st", NULL };
-#define VOLCMD(A) ("amixer -q set Master "#A"; xsetroot -name \"Volume: "\
-	"$(amixer sget Master | awk -F'[][]' '/dB/ { print $2, $6 }')\"")
-char *upvol[] = { "bash", "-c", VOLCMD("5%+"), NULL };
-char *downvol[] = { "bash", "-c", VOLCMD("5%-"), NULL };
-char *mutevol[] = { "bash", "-c", VOLCMD("toggle"), NULL };
-char *ssleep[]  = {
-	"bash", "-c", "killall slock; slock systemctl suspend -i", NULL };
-#define DIMCMD(A) ("xbacklight "#A" 5; xsetroot -name \"Brightness: "\
-	"$(xbacklight | cut -d. -f1)%\"")
-char *dimup[]   = { "bash", "-c", DIMCMD("-inc"), NULL };
-char *dimdown[] = { "bash", "-c", DIMCMD("-dec"), NULL };
-char *helpcmd[] = { "st", "-t", "Help", "-e", "bash", "-c",
-	"man filetwm || man -l ~/.config/filetwmconf.1", NULL };
+	/* virtual workspaces (must be 32 or less, *usually*) */
+	A(char*, tags, { "1", "2", "3", "4", "5", "6", "7", "8", "9" });
 
-/* keyboard shortcut definitions */
-#define AltMask Mod1Mask
-#define WinMask Mod4Mask
-#define TAGKEYS(KEY,TAG) \
-	{                  WinMask, KEY, view, {.ui = 1 << TAG} }, \
-	{        WinMask|ShiftMask, KEY, tag, {.ui = 1 << TAG} }, \
-	{                  AltMask, KEY, toggletag, {.ui = 1 << TAG} },
+	/* monitor layout
+	   Set mons to the number of monitors you want supported.
+	   Initialise with {0} for autodetection of monitors,
+	   otherwise set the position and size ({x,y,w,h}).
+	   The first monitor will be the primary monitor and have the bar.
+	   !!!Warning!!! maximum of 32 monitors supported.
+	   e.g:
+	A(Monitor, mons, {
+		{2420, 0, 1020, 1080},
+		{1920, 0, 500, 1080},
+		{3440, 0, 400,  1080}
+	});
+	   or to autodetect up to 3 monitors:
+	A(Monitor, mons, {{0}, {0}, {0}});
+	*/
+	A(Monitor, mons, {{0}});
+	/* factor of main area size [0.05..0.95] (for each monitor) */
+	P(float, mfact, {0.6});
+	/* number of clients in main area (for each monitor) */
+	P(int, nmain, {1});
 
-KeySym stackrelease = XK_Alt_L;
-Key keys[] = {
-	/*               modifier / key, function / argument */
-	{               WinMask, XK_Tab, spawn, {.v = launcher } },
-	{     WinMask|ShiftMask, XK_Tab, spawn, {.v = termcmd } },
-	{             WinMask, XK_space, grabresize, {.i = DragMove } },
-	{     WinMask|AltMask, XK_space, grabresize, {.i = DragSize } },
-	{ WinMask|ControlMask, XK_space, togglefloating, {0} },
-	{            AltMask, XK_Return, togglefullscreen, {0} },
-	{            WinMask, XK_Return, pin, {0} },
-	{    WinMask|AltMask, XK_Return, zoom, {0} },
-	{               AltMask, XK_Tab, grabstack, {.i = +1 } },
-	{     AltMask|ShiftMask, XK_Tab, grabstack, {.i = -1 } },
-	{                WinMask, XK_Up, focusstack, {.i = -1 } },
-	{              WinMask, XK_Down, focusstack, {.i = +1 } },
-	{              WinMask, XK_Left, viewshift, {.i = -1 } },
-	{             WinMask, XK_Right, viewshift, {.i = +1 } },
-	{    WinMask|ShiftMask, XK_Left, viewtagshift, {.i = -1 } },
-	{   WinMask|ShiftMask, XK_Right, viewtagshift, {.i = +1 } },
-	TAGKEYS( XK_1, 0)
-	TAGKEYS( XK_2, 1)
-	TAGKEYS( XK_3, 2)
-	TAGKEYS( XK_4, 3)
-	TAGKEYS( XK_5, 4)
-	TAGKEYS( XK_6, 5)
-	TAGKEYS( XK_7, 6)
-	TAGKEYS( XK_8, 7)
-	TAGKEYS( XK_9, 8)
-	{                 AltMask, XK_0, tag, {.ui = ~0 } },
-	{                AltMask, XK_F4, killclient, {0} },
-	{                WinMask, XK_F4, spawn, {.v = ssleep } },
-	{ AltMask|ControlMask|ShiftMask, XK_F4, quit, {0} },
-	{    0, XF86XK_AudioLowerVolume, spawn, {.v = downvol } },
-	{           0, XF86XK_AudioMute, spawn, {.v = mutevol } },
-	{    0, XF86XK_AudioRaiseVolume, spawn, {.v = upvol } },
-	{               0, XF86XK_Sleep, spawn, {.v = ssleep } },
-	{     0, XF86XK_MonBrightnessUp, spawn, {.v = dimup } },
-	{   0, XF86XK_MonBrightnessDown, spawn, {.v = dimdown } },
-};
+	/* commands */
+	P(char*, launcher, { "dmenu_run", "-p", ">", "-m", "0", "-i", "-fn",
+		"monospace:size=8", "-nf", "#dddddd", "-sf", "#dddddd", "-nb", "#111111",
+		"-sb", "#335577", NULL });
+	P(char*, terminal, { "st", NULL });
+	#define VOLCMD(A) ("amixer -q set Master "#A"; xsetroot -name \"Volume: "\
+		"$(amixer sget Master | awk -F'[][]' '/dB/ { print $2, $6 }')\"")
+	P(char*, upvol, { "bash", "-c", VOLCMD("5%+"), NULL });
+	P(char*, downvol, { "bash", "-c", VOLCMD("5%-"), NULL });
+	P(char*, mutevol, { "bash", "-c", VOLCMD("toggle"), NULL });
+	P(char*, suspend, {
+		"bash", "-c", "killall slock; slock systemctl suspend -i", NULL });
+	#define DIMCMD(A) ("xbacklight "#A" 5; xsetroot -name \"Brightness: "\
+		"$(xbacklight | cut -d. -f1)%\"")
+	P(char*, dimup, { "bash", "-c", DIMCMD("-inc"), NULL });
+	P(char*, dimdown, { "bash", "-c", DIMCMD("-dec"), NULL });
+	P(char*, help, { "st", "-t", "Help", "-e", "bash", "-c",
+		"man filetwm || man -l ~/.config/filetwmconf.1", NULL });
 
-/* bar actions */
-Button buttons[] = {
-	/* click,      button, function / argument */
-	{ ClkLauncher, Button1, spawn, {.v = launcher } },
-	{ ClkWinTitle, Button1, focusstack, {.i = +1 } },
-	{ ClkWinTitle, Button3, focusstack, {.i = -1 } },
-	{ ClkStatus,   Button1, spawn, {.v = helpcmd } },
-	{ ClkTagBar,   Button1, view, {0} },
-	{ ClkTagBar,   Button3, tag, {0} },
-};
+	/* keyboard shortcut definitions */
+	#define AltMask Mod1Mask
+	#define WinMask Mod4Mask
+	#define TK(KEY) { WinMask, XK_##KEY, view, {.ui = 1 << (KEY - 1)} }, \
+	{       WinMask|ShiftMask, XK_##KEY, tag, {.ui = 1 << (KEY - 1)} }, \
+	{                 AltMask, XK_##KEY, toggletag, {.ui = 1 << (KEY - 1)} },
+	/* Alt+Tab style behaviour key release */
+	S(KeySym, stackrelease, XK_Alt_L);
+	A(Key, keys, {
+		/*               modifier / key, function / argument */
+		{               WinMask, XK_Tab, spawn, {.v = &launcher } },
+		{     WinMask|ShiftMask, XK_Tab, spawn, {.v = &terminal } },
+		{             WinMask, XK_space, grabresize, {.i = DragMove } },
+		{     WinMask|AltMask, XK_space, grabresize, {.i = DragSize } },
+		{ WinMask|ControlMask, XK_space, togglefloating, {0} },
+		{            AltMask, XK_Return, togglefullscreen, {0} },
+		{            WinMask, XK_Return, pin, {0} },
+		{    WinMask|AltMask, XK_Return, zoom, {0} },
+		{               AltMask, XK_Tab, grabstack, {.i = +1 } },
+		{     AltMask|ShiftMask, XK_Tab, grabstack, {.i = -1 } },
+		{                WinMask, XK_Up, focusstack, {.i = -1 } },
+		{              WinMask, XK_Down, focusstack, {.i = +1 } },
+		{              WinMask, XK_Left, viewshift, {.i = -1 } },
+		{             WinMask, XK_Right, viewshift, {.i = +1 } },
+		{    WinMask|ShiftMask, XK_Left, viewtagshift, {.i = -1 } },
+		{   WinMask|ShiftMask, XK_Right, viewtagshift, {.i = +1 } },
+		{                 AltMask, XK_0, tag, {.ui = ~0 } },
+		{                AltMask, XK_F4, killclient, {0} },
+		{                WinMask, XK_F4, spawn, {.v = &suspend } },
+		{ AltMask|ControlMask|ShiftMask, XK_F4, quit, {0} },
+		{    0, XF86XK_AudioLowerVolume, spawn, {.v = &downvol } },
+		{           0, XF86XK_AudioMute, spawn, {.v = &mutevol } },
+		{    0, XF86XK_AudioRaiseVolume, spawn, {.v = &upvol } },
+		{               0, XF86XK_Sleep, spawn, {.v = &suspend } },
+		{     0, XF86XK_MonBrightnessUp, spawn, {.v = &dimup } },
+		{   0, XF86XK_MonBrightnessDown, spawn, {.v = &dimdown } },
+		TK(1) TK(2) TK(3) TK(4) TK(5) TK(6) TK(7) TK(8) TK(9)
+	});
+
+	/* bar actions */
+	A(Button, buttons, {
+		/* click,      button, function / argument */
+		{ ClkLauncher, Button1, spawn, {.v = &launcher } },
+		{ ClkWinTitle, Button1, focusstack, {.i = +1 } },
+		{ ClkWinTitle, Button3, focusstack, {.i = -1 } },
+		{ ClkStatus,   Button1, spawn, {.v = &help } },
+		{ ClkTagBar,   Button1, view, {0} },
+		{ ClkTagBar,   Button3, tag, {0} },
+	});
+}
 
 /* End Configuration Section
 ****************************/
@@ -413,7 +423,7 @@ buttonpress(XEvent *e)
 	XButtonPressedEvent *ev = &e->xbutton;
 
 	if (ev->window == barwin) {
-		for (i = LENGTH(tags) - 1; i >= 0 && ev->x < (x -= TEXTW(tags[i])); i--);
+		for (i = tagslen - 1; i >= 0 && ev->x < (x -= TEXTW(tags[i])); i--);
 		if (i >= 0) {
 			click = ClkTagBar;
 			arg.ui = 1 << i;
@@ -421,7 +431,7 @@ buttonpress(XEvent *e)
 			click = ClkStatus;
 		else if (ev->x < TEXTW(lsymbol))
 			click = ClkLauncher;
-		for (i = 0; i < LENGTH(buttons); i++)
+		for (i = 0; i < buttonslen; i++)
 			if (click == buttons[i].click && buttons[i].button == ev->button)
 				buttons[i].func(arg.ui ? &arg : &buttons[i].arg);
 	}
@@ -593,7 +603,7 @@ drawbar(int zen)
 
 	/* draw tags (right align) */
 	x = mons->mw;
-	for (i = LENGTH(tags) - 1; i >= 0; i--) {
+	for (i = tagslen - 1; i >= 0; i--) {
 		x -= (w = TEXTW(tags[i]));
 		drawtext(x, 0, w, BARH, tags[i], &cols[urg & 1 << i ? bg : fg],
 			&cols[urg & 1 << i ? fg : (tagset & 1 << i ? mark : bg)]);
@@ -768,12 +778,12 @@ grabkeys(void)
 {
 	unsigned int i, j;
 	/* NumLock assumed to be Mod2Mask */
-	unsigned int modifiers[] = { 0, LockMask, Mod2Mask, Mod2Mask|LockMask };
+	unsigned int mods[] = { 0, LockMask, Mod2Mask, Mod2Mask|LockMask };
 
 	XUngrabKey(dpy, AnyKey, AnyModifier, root);
-	for (i = 0; i < LENGTH(keys); i++)
-		for (j = 0; j < LENGTH(modifiers) && KCODE(keys[i].key); j++)
-			XGrabKey(dpy, KCODE(keys[i].key), keys[i].mod | modifiers[j], root,
+	for (i = 0; i < keyslen; i++)
+		for (j = 0; j < (sizeof mods / sizeof mods[0]) && KCODE(keys[i].key); j++)
+			XGrabKey(dpy, KCODE(keys[i].key), keys[i].mod | mods[j], root,
 				True, GrabModeAsync, GrabModeAsync);
 }
 
@@ -817,7 +827,7 @@ grabresizeabort() {
 
 	/* update the monitor layout to match any tiling changes */
 	if (sel && dragmode == DragTile) {
-		for (m = 0; m < MONLEN-1 && !INMON(sel->x, sel->y, mons[m]); m++);
+		for (m = 0; m < monslen-1 && !INMON(sel->x, sel->y, mons[m]); m++);
 		mfact[m] = MIN(0.95, MAX(0.05, (float)WIDTH(sel) / mons[m].mw));
 		nmain[m] = MAX(1, mons[m].mh / HEIGHT(sel));
 		tile();
@@ -842,7 +852,7 @@ keypress(XEvent *e)
 	unsigned int i;
 
 	grabresizeabort();
-	for (i = 0; i < LENGTH(keys); i++)
+	for (i = 0; i < keyslen; i++)
 		if (e->xkey.keycode == KCODE(keys[i].key)
 		&& KEYMASK(keys[i].mod) == KEYMASK(e->xkey.state))
 			keys[i].func(&(keys[i].arg));
@@ -906,7 +916,7 @@ manage(Window w, XWindowAttributes *wa)
 
 	/* find current monitor */
 	if (MOUSEINF(dwin, x, y, dui))
-		for (m = MONLEN-1; m > 0 && !INMON(x, y, mons[m]); m--);
+		for (m = monslen-1; m > 0 && !INMON(x, y, mons[m]); m--);
 	else m = 0;
 	/* adjust to current monitor */
 	if (c->x + WIDTH(c) > mons[m].mx + mons[m].mw)
@@ -1086,8 +1096,8 @@ resize(Client *c, int x, int y, int w, int h)
 		c->fw = w;
 		c->fh = h;
 		/* snap position to edges */
-		for (m1 = 0; m1 < MONLEN-1 && !INMON(x+snap, y+snap, mons[m1]); m1++);
-		for (m2 = 0; m2 < MONLEN-1 && !INMON(x+w-snap, y+h-snap, mons[m2]); m2++);
+		for (m1 = 0; m1 < monslen-1 && !INMON(x+snap, y+snap, mons[m1]); m1++);
+		for (m2 = 0; m2 < monslen-1 && !INMON(x+w-snap, y+h-snap, mons[m2]); m2++);
 		/* snap position */
 		x = (abs(mons[m1].mx - x) < snap) ? mons[m1].mx : x;
 		y = (abs(WINY(mons[m1]) - y) < snap) ? WINY(mons[m1]) : y;
@@ -1299,10 +1309,10 @@ setfullscreen(Client *c, int fullscreen)
 		c->bw = 0;
 		c->isfloating = 1;
 		/* find the full screen spread across the monitors */
-		for (m1 = MONLEN-1; m1 > 0 && !INMON(c->x, c->y, mons[m1]); m1--);
-		for (m2 = 0; m2 < MONLEN
+		for (m1 = monslen-1; m1 > 0 && !INMON(c->x, c->y, mons[m1]); m1--);
+		for (m2 = 0; m2 < monslen
 		&& !INMON(c->x + WIDTH(c), c->y + HEIGHT(c), mons[m2]); m2++);
-		if (m2 == MONLEN || mons[m2].mx + mons[m2].mw <= mons[m1].mx
+		if (m2 == monslen || mons[m2].mx + mons[m2].mw <= mons[m1].mx
 		|| mons[m2].my + mons[m2].mh <= mons[m1].my)
 			m2 = m1;
 		/* apply fullscreen window parameters */
@@ -1336,13 +1346,17 @@ setup(void)
 	sigchld(0);
 
 	/* Load configs.
-	   First load the distribution's config plugin, if one exists.
+	   First load the default included config.
+	   Then load the distribution's config plugin, if one exists.
 	   Then load the user's config plugin, if they have one.
 	   Leave the current working directory in the user's home dir. */
-	if (LOADCONF("/etc/config/filetwmconf.so"))
+	defaultconfig();
+	if (LOADCONF("/etc/config/filetwmconf.so", conf))
 		conf();
-	if (!chdir(getenv("HOME")) && LOADCONF(".config/filetwmconf.so"))
+	if (!chdir(getenv("HOME")) && LOADCONF(".config/filetwmconf.so", conf))
 		conf();
+	else if (access(".config/filetwmconf.so", F_OK) == 0)
+		die(dlerror());
 
 	/* init screen and display */
 	XSetErrorHandler(xerror);
@@ -1486,8 +1500,8 @@ spawn(const Arg *arg)
 		if (dpy)
 			close(ConnectionNumber(dpy));
 		setsid();
-		execvp(((char **)arg->v)[0], (char **)arg->v);
-		fprintf(stderr, "filetwm: execvp %s", ((char **)arg->v)[0]);
+		execvp((*(char***)arg->v)[0], *(char ***)arg->v);
+		fprintf(stderr, "filetwm: execvp %s", (*(char ***)arg->v)[0]);
 		perror(" failed");
 		exit(EXIT_SUCCESS);
 	}
@@ -1506,19 +1520,20 @@ void
 tile(void)
 {
 	unsigned int m, h, mw;
-	int nm[MONLEN] = {0}, i[MONLEN] = {0}, my[MONLEN] = {0}, ty[MONLEN] = {0};
+	/* maximum of 32 monitors supported */
+	int nm[32] = {0}, i[32] = {0}, my[32] = {0}, ty[32] = {0};
 	Client *c;
 
 	/* find the number of clients in each monitor */
 	for (c = nexttiled(clients); c; c = nexttiled(c->next)) {
-		for (m = LENGTH(mons)-1; m > 0 && !ONMON(c, mons[m]); m--);
+		for (m = monslen-1; m > 0 && !ONMON(c, mons[m]); m--);
 		nm[m]++;
 	}
 
 	/* tile windows into the relevant monitors. */
 	for (c = nexttiled(clients); c; c = nexttiled(c->next), i[m]++) {
 		/* find the monitor placement again */
-		for (m = LENGTH(mons)-1; m > 0 && !ONMON(c, mons[m]); m--);
+		for (m = monslen-1; m > 0 && !ONMON(c, mons[m]); m--);
 		/* tile the client within the relevant monitor */
 		mw = nm[m] > nmain[m] ? mons[m].mw * mfact[m] : mons[m].mw;
 		if (i[m] < nmain[m]) {
@@ -1616,7 +1631,7 @@ updatemonitors(XEvent *e)
 	XRRMonitorInfo *inf;
 
 	inf = XRRGetMonitors(dpy, root, 1, &n);
-	for (i = 0; i < n && i < MONLEN; i++) {
+	for (i = 0; i < n && i < monslen; i++) {
 		SETMON(mons[i], inf[i])
 		if (inf[i].primary)
 			pri = i;

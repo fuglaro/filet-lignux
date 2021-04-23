@@ -42,8 +42,7 @@ main(int argc, char *argv[])
 	long bat, delta, idle, cpu, mem, maxcpu, totcpu;
 	/* only b up to 64 CPUs */
 	static long ctimelast[64] = {0}, cidlelast[64] = {0};
-	char buf[5000], *b, *dcp;
-	buf[4999] = '\0';
+	char buf[5000] = {[4999] = '\0'}, *b, *dcp;
 	time_t now;
 	Display *dpy = XOpenDisplay(NULL);
 	Window root = RootWindow(dpy, DefaultScreen(dpy));
