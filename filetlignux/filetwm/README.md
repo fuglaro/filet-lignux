@@ -47,6 +47,8 @@ make
 ## Dependencies
 amixer, xsetroot, bash, slock, awk, systemctl (suspend), xbacklight, man, st
 
+These dependencies can be changed with a configuration plugin.
+
 ## Running
 
 There are a number of ways to launch a Window Manager (https://wiki.archlinux.org/index.php/Xinit), all of which apply to filetwm. A simple way is to switch to a virtual console and then launch filetwm with:
