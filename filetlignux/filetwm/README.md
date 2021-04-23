@@ -75,8 +75,7 @@ cc -shared -fPIC filetwmconf.c -o ~/.config/filetwmconf.so
 
 void config(void) {
     S(char*, font, "monospane:bold:size=5");
-    P(char*, launcher,
-    { "launcher", "monospace:size=5", "#dddddd", "#111111", "#335577", NULL });
+    P(char*, launcher, { "launcher", "monospace:size=5", "#dddddd", "#111111", "#335577", NULL });
 }
 ```
 Save it as `filetwmconf.c`, then build and install it to the user config location with the command in the comment of the file.
