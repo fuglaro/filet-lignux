@@ -78,11 +78,11 @@ void config(void) {
     P(char*, launcher, { "launcher", "monospace:size=5", "#dddddd", "#111111", "#335577", NULL });
 }
 ```
-Save it as `filetwmconf.c`, then build and install it to the user config location with the command in the comment of the file.
+Save it as `filetwmconf.c`, then install it to the user config location using the command found in the comment.
 
-Many other configurations can be made via this plugin system and supported options include: colors, layout, borders, keyboard commands, launcher command, monitors, and top-bar actions. Any non-static global variable in the `filetwm.c` source file can be changed in this way. Please see the defaultconfig method in the code.
+Many other configurations can be made via this plugin system and supported options include: colors, layout, borders, keyboard commands, launcher command, monitor configuration, and top-bar actions. Please see the defaultconfig method in the `filetwm.c` file for more details.
 
-If you customise the user config plugin to change the behaviours around documented things like keyboard shortcuts, you can update the Help action by creating a custom man page at `~/.config/filetwmconf.1`.
+If you change the behaviours around documented things, like keyboard shortcuts, you can update the Help action by creating a custom man page at `~/.config/filetwmconf.1`.
 
 ### Advanced config example
 The following config exemplifies changes to every option:
