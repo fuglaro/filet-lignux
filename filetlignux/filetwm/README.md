@@ -199,7 +199,7 @@ void config(void) {
     {               0, XF86XK_Sleep, spawn, {.v = &suspend } },
     {     0, XF86XK_MonBrightnessUp, spawn, {.v = &dimup } },
     {   0, XF86XK_MonBrightnessDown, spawn, {.v = &dimdown } },
-    TK(1) TK(2) TK(3) TK(4) TK(5) TK(6) TK(7) TK(8) TK(9)
+    TK(1) TK(2) TK(3) TK(4)
   });
 
   /* bar actions */
