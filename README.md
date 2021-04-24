@@ -30,6 +30,11 @@ To also install the mouse keys, this must be installed to the system via sudo:
 ```bash
 sudo ./sysinstall
 ```
+## Launching
+
+```bash
+~/.config/filetlignux/launch
+```
 
 # Thanks to, grateful forks, and contributions
 
@@ -52,5 +57,4 @@ We stand on the shoulders of giants. They own this, far more than I do.
 * https://www.texturex.com/fractal-textures/fractal-design-picture-wallpaper-stock-art-image-definition-free-neuron-chaos-fractal-fracture-broken-synapse-texture/
 * https://keithp.com/blogs/Cursor_tracking/
 * https://www.jetbrains.com/lp/mono/
-* https://github.com/akinozgen/dmenu_applications
 * https://github.com/march-linux/mimi

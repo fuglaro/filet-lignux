@@ -13,7 +13,7 @@ mkdir -p ~/.config
 rsync -av --delete --exclude cache filetlignux/ ~/.config/filetlignux
 
 # Build everything that needs to be compiled.
-for build in dmenu filetwm filetwmconf st filetstatus fonts; do
+for build in dmenu filetwm filetwmconf filetmenu st filetstatus fonts; do
 	printf "\n---- Building ${build} ----\n"
 	cd ~/.config/filetlignux/$build/; make; cd -
 done
