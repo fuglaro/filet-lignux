@@ -7,7 +7,7 @@ cc -shared -fPIC filetwmconf.c -o ~/.config/filetwmconf.so
 #define P(T, N, ...) extern T* N;static T _##N[]=__VA_ARGS__;N=_##N
 
 void config(void) {
-	S(char*, font, "monospane:bold:size=5");
+	S(char*, font, "monospace:size=7");
 	P(char*, launcher,
-		{ "launcher", "monospace:size=5", "#dddddd", "#111111", "#335577", NULL });
+		{ "launcher", "monospace:size=7", "#dddddd", "#111111", "#335577", NULL });
 }
