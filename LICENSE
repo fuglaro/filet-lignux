@@ -1,10 +1,5 @@
 MIT License
 
-LICENCE files within subfolders take precedence over this one for the
-subfolder content. Where in doubt, the less permissive licence must be
-respected. Any copyright mention in any LICENCE file is to be assumed to
-apply to the whole repository.
-
 © 2021 John van Leeuwen <jvl@convex.cc>
 © 2020 march-linux
 © 2020 Hiltjo Posthuma <hiltjo@codemadness.org>
