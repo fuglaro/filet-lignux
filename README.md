@@ -2,6 +2,9 @@
 
 A developer's linux configuration - a palatable lean slice.
 
+See https://github.com/fuglaro/filet-wm, a core component of this project.
+![](https://raw.githubusercontent.com/fuglaro/filet-wm/main/filetwm-demo.gif)
+
 This project explores minimalism while still providing the full power of a desktop environment. It is not for everyone, and it is the result of strong opinions, such as:
 * **Complexity must justify itself**.
 * Lightweight is better than heavyweight.
@@ -12,7 +15,6 @@ This project explores minimalism while still providing the full power of a deskt
 * Allow other tools to thrive - e.g: terminals don't need tabs or scrollback, that's what tmux is for.
 * Fix where fixes belong - don't work around bugs in other applications, contribute to them, or make something better.
 * Improvement via reduction is sometimes what a project desperately needs, because we do so tend to just add. (https://www.theregister.com/2021/04/09/people_complicate_things/)
-
 
 ## Installation
 
