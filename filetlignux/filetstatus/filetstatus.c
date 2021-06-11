@@ -6,13 +6,13 @@
  * Customised to run for filetwm.
  * Continuously sends updated status text to the root window name.
  *
- * "{VPN} (1*2%|2456M) [100] Filet 17:22"
+ * "{VPN} (1*2%|2456M) [100] FiletLignux 17:22"
  *
  * {VPN} => whether or not a tun0 network connection is active.
  * (1*2%|2456M) => multiplier*maxcpu|memuse
  *   maxcpu => the percent used of the highest load CPU.
- *   multiplier => how many times higher the total cpu cpu is over the maxcpu.
- *   memuse => memory cpu in Megabytes.
+ *   multiplier => how many times higher the total cpu is over the maxcpu.
+ *   memuse => memory use in Megabytes.
  * [100] => battery level.
  *
  * This file adheres to the opinion that editing C code
