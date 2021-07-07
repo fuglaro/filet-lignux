@@ -56,7 +56,6 @@ main(int argc, char *argv[])
 
 		/* cpu utilisation */
 		maxcpu = totcpu = 0;
-		/* cpu utilisation */
 		GET("/proc/stat");
 		/* skip the cpu totals line */
 		SEEK("cpu", buf);
