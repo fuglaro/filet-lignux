@@ -8,6 +8,6 @@ fi
 
 # Install the keyboard overrides for mouse buttons
 cp mousekeys/70-mousekeys.hwdb /etc/udev/hwdb.d/70-mousekeys.hwdb
-systemd-hwdb update
+udevadm hwdb --update
 udevadm trigger
 
