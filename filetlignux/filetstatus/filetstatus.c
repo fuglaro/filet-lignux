@@ -89,7 +89,7 @@ main(int argc, char *argv[])
 		now = time(0);
 
 		/* send output and wait interval */
-		snprintf(buf, 4999*sizeof(char), "%s(%ld*%ld%%|%ldM) [%ld] FiletLignux "
+		snprintf(buf, 4999*sizeof(char), "%s(%ld*%ld%%|%ldM) [%ld] "
 			"%02d:%02d", vpn?"{VPN} ":"", totcpu/(maxcpu?maxcpu:1), maxcpu,
 			mem/1024, bat, localtime(&now)->tm_hour, localtime(&now)->tm_min);
 		XStoreName(dpy, root, (char *)buf);
