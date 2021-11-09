@@ -29,7 +29,8 @@
 #include <X11/Xlib.h>
 
 /* load file to buffer - no fault handling, only use on /proc/ files */
-#define GET(F) f=open(F, O_RDONLY);r=read(f, buf, 4999*sizeof(char));close(f)
+#define GET(F) f=open(F, O_RDONLY);r=read(f, buf, 4999*sizeof(char));\
+	buf[r/sizeof(char)] = '\0'; close(f)
 /* search the buffer to after a string */
 #define SEEK(V, buf) ((b = strstr(buf, V)) ? b += strlen(V) : NULL)
 /* retrieve a 'long' from the buffer after a string */
@@ -55,7 +56,6 @@ main(int argc, char *argv[])
 
 		/* cpu utilisation */
 		maxcpu = totcpu = 0;
-		/* cpu utilisation */
 		GET("/proc/stat");
 		/* skip the cpu totals line */
 		SEEK("cpu", buf);
@@ -89,7 +89,7 @@ main(int argc, char *argv[])
 		now = time(0);
 
 		/* send output and wait interval */
-		snprintf(buf, 4999*sizeof(char), "%s(%ld*%ld%%|%ldM) [%ld] FiletLignux "
+		snprintf(buf, 4999*sizeof(char), "%s(%ld*%ld%%|%ldM) [%ld] "
 			"%02d:%02d", vpn?"{VPN} ":"", totcpu/(maxcpu?maxcpu:1), maxcpu,
 			mem/1024, bat, localtime(&now)->tm_hour, localtime(&now)->tm_min);
 		XStoreName(dpy, root, (char *)buf);

@@ -12,8 +12,8 @@
 # something along these lines.
 # https://wiki.archlinux.org/index.php/Map_scancodes_to_keycodes
 
-# AT keyboards
-evdev:atkbd:dmi:*
+evdev:input:*
+ KEYBOARD_KEY_70039=btn_left
  KEYBOARD_KEY_3a=btn_left
  KEYBOARD_KEY_b8=btn_middle
  KEYBOARD_KEY_dd=btn_right

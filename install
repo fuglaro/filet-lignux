@@ -26,7 +26,7 @@ find ~/.config/filetlignux/fonts/cache/*/fonts -type f | \
 
 # Installing home dir config files.
 printf "\n---- Linking HOME dir config files ----\n"
-for file in $(find ~/.config/filetlignux/installs/ -type f,l); do
+for file in $(find ~/.config/filetlignux/installs/ -type f -o -type l); do
 	dest=$(echo $file | sed -e 's:^.*/filetlignux/installs/::')
 	printf "$dest\n"
 	if [[ -L ~/$dest && `readlink ~/$dest` \
