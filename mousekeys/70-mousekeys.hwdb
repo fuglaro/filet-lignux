@@ -1,5 +1,5 @@
-# Install to /etc/udev/hwdb.d/70-mouse-keys.hwdb (and reboot)
-# sudo systemd-hwdb update
+# Install to /etc/udev/hwdb.d/70-mouse-keys.hwdb (may need reboot)
+# sudo udevadm hwdb --update
 # sudo udevadm trigger
 # add to /etc/rc.local if doesnt persist after reboot.
 # This maps the following keys to mouse buttons.

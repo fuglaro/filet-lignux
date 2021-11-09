@@ -2,6 +2,6 @@
 Encoding=UTF-8
 Name=FiletLignux
 Comment=Lean and palatable
-Exec=~/.config/filetlignux/launch
+Exec=~/.config/filetlignux/start
 Type=XSession
 

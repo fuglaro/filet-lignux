@@ -35,7 +35,7 @@ sudo ./sysinstall
 ## Launching
 
 ```bash
-~/.config/filetlignux/launch
+~/.config/filetlignux/start
 ```
 
 # Thanks to, grateful forks, and contributions
