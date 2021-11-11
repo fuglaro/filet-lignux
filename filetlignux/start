@@ -3,10 +3,6 @@
 # Put executables into the environment
 export PATH=~/.config/filetlignux/bin:${PATH}
 
-# Status bar updater
-pkill -f ".*/\.config/filetlignux/filetstatus/filetstatus $DISPLAY"
-~/.config/filetlignux/filetstatus/filetstatus $DISPLAY &
-
 # Apply background
 feh --bg-tile ~/.config/filetlignux/background.jpg
 
