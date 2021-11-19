@@ -42,21 +42,18 @@ sudo ./sysinstall
 
 We stand on the shoulders of giants. They own this, far more than I do.
 
-* https://archlinux.org/
+* https://archlinux.org
 * https://github.com
 * https://github.com/torvalds/linux
 * https://www.x.org/wiki/XorgFoundation
 * https://dwm.suckless.org
-* https://st.suckless.org
-* https://st.suckless.org/patches/nordtheme
-* https://st.suckless.org/patches/delkey
+* https://alacritty.org
+* https://github.com/eendroroy/alacritty-theme
 * https://tools.suckless.org/slock
-* https://tools.suckless.org/dmenu/
-* https://tools.suckless.org/dmenu/patches/mouse-suppor/
 * https://github.com/fuglaro/filet-wm
 * https://www.vim.org
 * https://github.com/tmux/tmux
-* https://www.texturex.com/fractal-textures/fractal-design-picture-wallpaper-stock-art-image-definition-free-neuron-chaos-fractal-fracture-broken-synapse-texture/
-* https://keithp.com/blogs/Cursor_tracking/
-* https://www.jetbrains.com/lp/mono/
+* https://www.texturex.com/fractal-textures/fractal-design-picture-wallpaper-stock-art-image-definition-free-neuron-chaos-fractal-fracture-broken-synapse-texture
+* https://keithp.com/blogs/Cursor_tracking
+* https://www.jetbrains.com/lp/mono
 * https://github.com/march-linux/mimi
