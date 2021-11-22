@@ -14,7 +14,7 @@ set list listchars=tab:\|\ ,trail:‹
 
 " Prettier search highlight background color "
 set hlsearch
-hi Search cterm=NONE ctermbg=black
+hi Search cterm=NONE ctermfg=black ctermbg=red
 
 " Highlight the 80th column "
 set colorcolumn=80
