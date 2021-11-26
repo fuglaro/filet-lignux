@@ -11,3 +11,6 @@ cp mousekeys/70-mousekeys.hwdb /etc/udev/hwdb.d/70-mousekeys.hwdb
 udevadm hwdb --update
 udevadm trigger
 
+# Install desktop launcher to existing display managers
+cp filetlignux/start /usr/bin/filetlignux-start
+cp filetlignux.desktop /usr/share/xsessions/
