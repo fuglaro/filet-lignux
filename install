@@ -2,46 +2,50 @@
 
 # Check dependencies
 printf "\n---- Checking dependencies ----\n"
-for dep in slock rsync feh xbacklight xsetroot firefox nnn mupdf vim make \
-pkg-config gcc alacritty tmux; do
-	command -v $dep || (echo "need $dep"; exit 1)
-done
+# Hard dependencies
+DEPS="slock feh xbacklight alacritty xsetroot make gcc unzip rsync"
+# Preferred applications
+PRFS="feh mupdf vlc vim tmux"
+for dep in $DEPS; do command -v $dep >/dev/null || echo "need: $dep"; done
+for dep in $PRFS; do command -v $dep >/dev/null || echo "suggested: $dep"; done
+for dep in $DEPS; do command -v $dep >/dev/null || exit 1; done
+for dep in $PRFS; do command -v $dep >/dev/null || \
+(read -p "Ignore (y)?"; test "$REPLY" == 'y' || exit 1;) done
 
 # Install base code.
 printf "\n---- Installing codebase ----\n"
 mkdir -p ~/.config
 rsync -av --delete --exclude cache filetlignux/ ~/.config/filetlignux
 
-# Build everything that needs to be compiled.
-for build in filetwm fonts mimi; do
-	printf "\n---- Building ${build} ----\n"
+# Build all the things that need compiling or constructing.
+for build in filetwm mimi; do
+	printf "\n---- Building $build ----\n"
 	cd ~/.config/filetlignux/$build/; make; cd -
 done
 
 # Install fonts.
-printf "\n---- Installing fonts ----\n"
-mkdir -p ~/.local/share/fonts
-find ~/.config/filetlignux/fonts/cache/*/fonts -type f | \
-	awk '{printf("ln -f -s %s ~/.local/share/fonts/\n", $1)}' | sh
+printf "\n---- Setup fonts ----\n"
+mkdir -p ~/.config/filetlignux/installs/.local/share/fonts
+wget -qO- 'https://github.com/ryanoasis/nerd-fonts/releases/latest/download/CascadiaCode.zip' | busybox unzip -d ~/.config/filetlignux/installs/.local/share/fonts -
 
 # Installing home dir config files.
 printf "\n---- Linking HOME dir config files ----\n"
-for file in $(find ~/.config/filetlignux/installs/ -type f -o -type l); do
-	dest=$(echo $file | sed -e 's:^.*/filetlignux/installs/::')
+while IFS= read -r file; do
+	dest=$(echo "$file" | sed -e 's:^.*/filetlignux/installs/::')
 	printf "$dest\n"
-	if [[ -L ~/$dest && `readlink ~/$dest` \
-	== `ls -1a ~/.config/filetlignux/installs/$dest` ]]; then
+	if [[ -L ~/"$dest" && `readlink ~/"$dest"` \
+	== `ls -1a ~/.config/filetlignux/installs/"$dest"` ]]; then
 		printf "...ok\n"
 	else
-		if [ -f ~/$dest ]; then
+		if [ -f ~/"$dest" ]; then
 			echo "...moving aside (~/$dest.old)"
-			mv ~/$dest ~/$dest.old
+			mv ~/"$dest" ~/"$dest.old"
 		fi
 		echo "...installing link (~/$dest)"
-		mkdir -p $(dirname ~/$dest)
-		ln -s $file ~/$dest
+		mkdir -p $(dirname ~/"$dest")
+		ln -s "$file" ~/"$dest"
 	fi
-done
+done <<< $(find ~/.config/filetlignux/installs/ -type f -o -type l)
 
 # Prep
 mkdir -p ~/.vim

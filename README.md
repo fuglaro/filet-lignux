@@ -38,6 +38,18 @@ sudo ./sysinstall
 ~/.config/filetlignux/start
 ```
 
+# Future Considerations
+* ? remove vim configs (make standard)
+* ? wst vs alacritty
+* ? alacritty doesn't work on
+* ? simpler feh dependency for
+* enhance xdg_open settings
+* better theme for gtk-x
+* switch to Nerd Font
+* neovim with IDE settings like nvchad. or just nvchad
+* update gif to all the new cool things (see filetwm)
+* put prefered application launcher wrappers in the bin folder
+
 # Thanks to, grateful forks, and contributions
 
 We stand on the shoulders of giants. They own this, far more than I do.
