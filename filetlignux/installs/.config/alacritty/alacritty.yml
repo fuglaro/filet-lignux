@@ -179,7 +179,7 @@ font:
 colors:
 
     primary:
-      background: '0x191622'
+      background: '0x292632'
       foreground: '0xe1e1e6'
     cursor:
       text: '0x191622'

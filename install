@@ -21,9 +21,9 @@ rsync -av --delete --exclude cache filetlignux/ ~/.config/filetlignux
 
 # Build all the things that need compiling or constructing.
 # Note that these won't get automatic updates:
-# Caskaydia-NerdFont, neovim
+# neovim
 # You can force all updates with: rm -rf ~/.config/filetlignux/*/cache
-for build in filetwm neovim nvchad fonts mimi; do
+for build in filetwm neovim nvchad mimi; do
 	printf "\n---- Building $build ----\n"
 	cd ~/.config/filetlignux/$build/; make all; cd -
 done
@@ -49,7 +49,7 @@ done <<< $(find ~/.config/filetlignux/installs/ -type f -o -type l)
 
 # Prep and initialisation
 printf "\n---- Initialising ----\n"
-mkdir -p ~/.vim
+mkdir -p ~/.local/share/vim
 nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerSync'; echo
 
 printf "\n---- Done ----\n"

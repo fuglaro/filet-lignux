@@ -24,9 +24,9 @@ augroup resCur
 augroup END
 
 " Swap file location etc "
-set backupdir=~/.vim
-set directory=~/.vim
-set undodir=~/.vim
+set backupdir=~/.local/share/vim
+set directory=~/.local/share/vim
+set undodir=~/.local/share/vim
 
 " Disable auto-formatting "
 set paste

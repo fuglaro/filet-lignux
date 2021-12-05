@@ -46,6 +46,7 @@ sudo ./sysinstall
 * enhance xdg_open settings
 * put prefered application launcher wrappers in the bin folder
 * update gif to all the new cool things (see filetwm)
+* some things don't update themselves. do this in the makefiles - find a way. see the install script for details.
 
 # Thanks to, grateful forks, and contributions
 
