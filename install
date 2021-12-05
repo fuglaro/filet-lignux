@@ -7,7 +7,7 @@ printf "\n---- Checking dependencies ----\n"
 DEPS="slock feh xbacklight alacritty xsetroot make gcc busybox rsync wget"
 # Preferred applications
 #  - ripgrep,node: suggested by nvchad with neovim
-PRFS="mupdf vlc neovim rg node vim tmux"
+PRFS="mupdf vlc nvim rg node vim tmux"
 for dep in $DEPS; do command -v $dep >/dev/null || echo "need: $dep"; done
 for dep in $PRFS; do command -v $dep >/dev/null || echo "suggested: $dep"; done
 for dep in $DEPS; do command -v $dep >/dev/null || exit 1; done
