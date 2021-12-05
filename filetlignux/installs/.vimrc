@@ -1,17 +1,5 @@
 set encoding=utf-8
 
-" Key combinations "
-" --normal mode--
-"  space,l : toggle hidden characters
-nnoremap <SPACE>l :set list! list?<CR>
-"  space,p : toggle auto-formatting
-nnoremap <SPACE>p :set paste! paste?<CR>
-
-" Hidden character management "
-set tabstop=2
-set shiftwidth=2
-set list listchars=tab:\|\ ,trail:‹
-
 " Prettier search highlight background color "
 set hlsearch
 hi Search cterm=NONE ctermfg=black ctermbg=red

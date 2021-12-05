@@ -4,10 +4,6 @@
 all: cache/mimi
 	git -C cache/mimi pull
 
-cache:
-	mkdir cache
-
-cache/mimi: cache
+cache/mimi:
+	mkdir -p cache
 	git clone https://github.com/march-linux/mimi.git cache/mimi
-
-.PHONY: all

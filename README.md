@@ -39,16 +39,13 @@ sudo ./sysinstall
 ```
 
 # Future Considerations
-* ? remove vim configs (make standard)
+* Wait for neovim 0.6.0 to get into more distos then replace with dependency
 * ? wst vs alacritty
-* ? alacritty doesn't work on
-* ? simpler feh dependency for
-* enhance xdg_open settings
+* ? alacritty doesn't work on oneplus6T(postmarketos)
 * better theme for gtk-x
-* switch to Nerd Font
-* neovim with IDE settings like nvchad. or just nvchad
-* update gif to all the new cool things (see filetwm)
+* enhance xdg_open settings
 * put prefered application launcher wrappers in the bin folder
+* update gif to all the new cool things (see filetwm)
 
 # Thanks to, grateful forks, and contributions
 
@@ -63,9 +60,11 @@ We stand on the shoulders of giants. They own this, far more than I do.
 * https://github.com/eendroroy/alacritty-theme
 * https://tools.suckless.org/slock
 * https://github.com/fuglaro/filet-wm
+* https://github.com/neovim/neovim
+* https://github.com/NvChad/NvChad
 * https://www.vim.org
 * https://github.com/tmux/tmux
 * https://www.texturex.com/fractal-textures/fractal-design-picture-wallpaper-stock-art-image-definition-free-neuron-chaos-fractal-fracture-broken-synapse-texture
 * https://keithp.com/blogs/Cursor_tracking
-* https://www.jetbrains.com/lp/mono
+* https://www.nerdfonts.com
 * https://github.com/march-linux/mimi

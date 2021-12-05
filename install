@@ -3,9 +3,11 @@
 # Check dependencies
 printf "\n---- Checking dependencies ----\n"
 # Hard dependencies
-DEPS="slock feh xbacklight alacritty xsetroot make gcc unzip rsync"
+#  - slock,xbacklight,feh,alacritty,xsetroot: for filetwm (and default app)
+DEPS="slock feh xbacklight alacritty xsetroot make gcc busybox rsync wget"
 # Preferred applications
-PRFS="feh mupdf vlc vim tmux"
+#  - ripgrep,node: suggested by nvchad with neovim
+PRFS="mupdf vlc rg node vim tmux"
 for dep in $DEPS; do command -v $dep >/dev/null || echo "need: $dep"; done
 for dep in $PRFS; do command -v $dep >/dev/null || echo "suggested: $dep"; done
 for dep in $DEPS; do command -v $dep >/dev/null || exit 1; done
@@ -18,15 +20,13 @@ mkdir -p ~/.config
 rsync -av --delete --exclude cache filetlignux/ ~/.config/filetlignux
 
 # Build all the things that need compiling or constructing.
-for build in filetwm mimi; do
+# Note that these won't get automatic updates:
+# Caskaydia-NerdFont, neovim
+# You can force all updates with: rm -rf ~/.config/filetlignux/*/cache
+for build in filetwm neovim nvchad fonts mimi; do
 	printf "\n---- Building $build ----\n"
-	cd ~/.config/filetlignux/$build/; make; cd -
+	cd ~/.config/filetlignux/$build/; make all; cd -
 done
-
-# Install fonts.
-printf "\n---- Setup fonts ----\n"
-mkdir -p ~/.config/filetlignux/installs/.local/share/fonts
-wget -qO- 'https://github.com/ryanoasis/nerd-fonts/releases/latest/download/CascadiaCode.zip' | busybox unzip -d ~/.config/filetlignux/installs/.local/share/fonts -
 
 # Installing home dir config files.
 printf "\n---- Linking HOME dir config files ----\n"
@@ -34,7 +34,7 @@ while IFS= read -r file; do
 	dest=$(echo "$file" | sed -e 's:^.*/filetlignux/installs/::')
 	printf "$dest\n"
 	if [[ -L ~/"$dest" && `readlink ~/"$dest"` \
-	== `ls -1a ~/.config/filetlignux/installs/"$dest"` ]]; then
+	== `ls -1da ~/.config/filetlignux/installs/"$dest"` ]]; then
 		printf "...ok\n"
 	else
 		if [ -f ~/"$dest" ]; then
@@ -47,5 +47,9 @@ while IFS= read -r file; do
 	fi
 done <<< $(find ~/.config/filetlignux/installs/ -type f -o -type l)
 
-# Prep
+# Prep and initialisation
+printf "\n---- Initialising ----\n"
 mkdir -p ~/.vim
+nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerSync'; echo
+
+printf "\n---- Done ----\n"
