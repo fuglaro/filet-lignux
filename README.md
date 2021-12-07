@@ -39,7 +39,6 @@ sudo ./sysinstall
 ```
 
 # Future Considerations
-* ? wst vs alacritty
 * ? alacritty doesn't work on oneplus6T(postmarketos)
 * better theme for gtk-x
 * enhance xdg_open settings
