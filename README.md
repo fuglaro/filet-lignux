@@ -39,14 +39,12 @@ sudo ./sysinstall
 ```
 
 # Future Considerations
-* Wait for neovim 0.6.0 to get into more distos then replace with dependency
 * ? wst vs alacritty
 * ? alacritty doesn't work on oneplus6T(postmarketos)
 * better theme for gtk-x
 * enhance xdg_open settings
 * put prefered application launcher wrappers in the bin folder
 * update gif to all the new cool things (see filetwm)
-* some things don't update themselves. do this in the makefiles - find a way. see the install script for details.
 
 # Thanks to, grateful forks, and contributions
 
