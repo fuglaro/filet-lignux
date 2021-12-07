@@ -62,7 +62,6 @@ We stand on the shoulders of giants. They own this, far more than I do.
 * https://tools.suckless.org/slock
 * https://github.com/fuglaro/filet-wm
 * https://github.com/neovim/neovim
-* https://github.com/NvChad/NvChad
 * https://www.vim.org
 * https://github.com/tmux/tmux
 * https://www.texturex.com/fractal-textures/fractal-design-picture-wallpaper-stock-art-image-definition-free-neuron-chaos-fractal-fracture-broken-synapse-texture

@@ -6,8 +6,7 @@ printf "\n---- Checking dependencies ----\n"
 #  - slock,xbacklight,feh,alacritty,xsetroot: for filetwm (and default app)
 DEPS="slock feh xbacklight alacritty xsetroot make gcc busybox rsync wget"
 # Preferred applications
-#  - ripgrep,node: suggested by nvchad with neovim
-PRFS="mupdf vlc nvim rg node vim tmux"
+PRFS="mupdf vlc nvim tmux"
 for dep in $DEPS; do command -v $dep >/dev/null || echo "need: $dep"; done
 for dep in $PRFS; do command -v $dep >/dev/null || echo "suggested: $dep"; done
 for dep in $DEPS; do command -v $dep >/dev/null || exit 1; done
@@ -23,7 +22,7 @@ rsync -av --delete --exclude cache filetlignux/ ~/.config/filetlignux
 # Note that these won't get automatic updates:
 # neovim
 # You can force all updates with: rm -rf ~/.config/filetlignux/*/cache
-for build in filetwm nvchad mimi; do
+for build in filetwm mimi; do
 	printf "\n---- Building $build ----\n"
 	cd ~/.config/filetlignux/$build/; make all; cd -
 done
@@ -50,6 +49,5 @@ done <<< $(find ~/.config/filetlignux/installs/ -type f -o -type l)
 # Prep and initialisation
 printf "\n---- Initialising ----\n"
 mkdir -p ~/.local/share/vim
-nvim --headless -c 'autocmd User PackerComplete quitall' -c 'PackerSync'; echo
 
 printf "\n---- Done ----\n"
