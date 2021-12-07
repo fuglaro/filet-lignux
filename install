@@ -46,8 +46,4 @@ while IFS= read -r file; do
 	fi
 done <<< $(find ~/.config/filetlignux/installs/ -type f -o -type l)
 
-# Prep and initialisation
-printf "\n---- Initialising ----\n"
-mkdir -p ~/.local/share/vim
-
 printf "\n---- Done ----\n"
