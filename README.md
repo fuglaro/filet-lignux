@@ -40,10 +40,12 @@ sudo ./sysinstall
 
 # Future Considerations
 * ? alacritty doesn't work on oneplus6T(postmarketos)
+* neovim configuration
+  * file browser: https://github.com/luukvbaal/nnn.nvim
 * better theme for gtk-x
 * enhance xdg_open settings
-* put prefered application launcher wrappers in the bin folder
-* update gif to all the new cool things (see filetwm)
+* put prefered application launcher wrappers in the bin folder.
+* add gif demoing customisations snd desktop features.
 
 # Thanks to, grateful forks, and contributions
 
