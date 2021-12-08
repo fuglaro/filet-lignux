@@ -41,6 +41,7 @@ sudo ./sysinstall
 # Future Considerations
 * ? alacritty doesn't work on oneplus6T(postmarketos)
 * neovim configuration
+  * https://github.com/rockerBOO/awesome-neovim/blob/main/README.md#preconfigured-configuration - doom?
   * file browser: https://github.com/luukvbaal/nnn.nvim
 * better theme for gtk-x
 * enhance xdg_open settings
