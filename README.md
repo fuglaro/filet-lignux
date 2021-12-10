@@ -19,11 +19,11 @@ This project explores minimalism while still providing the full power of a deskt
 ## Installation
 
 Note that this will move aside some configuration files in your home
-directory such as .vimrc and .tmux.conf.
+directory such as .tmux.conf.
 
 ```bash
-git clone git@github.com:fuglaro/filet-lignux.git ~/filet-lignux
-cd ~/filet-lignux
+git clone git@github.com:fuglaro/filet-lignux.git --depth=1
+cd filet-lignux
 ./install
 ```
 
@@ -41,7 +41,7 @@ sudo ./sysinstall
 # Future Considerations
 * ? alacritty doesn't work on oneplus6T(postmarketos)
 * neovim configuration
-  * https://github.com/rockerBOO/awesome-neovim/blob/main/README.md#preconfigured-configuration - doom?
+  * https://github.com/rockerBOO/awesome-neovim/blob/main/README.md#preconfigured-configuration
   * file browser: https://github.com/luukvbaal/nnn.nvim
 * better theme for gtk-x
 * enhance xdg_open settings
@@ -68,3 +68,6 @@ We stand on the shoulders of giants. They own this, far more than I do.
 * https://keithp.com/blogs/Cursor_tracking
 * https://www.nerdfonts.com
 * https://github.com/march-linux/mimi
+* https://github.com/jarun/nnn
+* https://github.com/savq/paq-nvim
+* https://github.com/luukvbaal/nnn.nvim

@@ -4,4 +4,4 @@
 feh --bg-tile ~/.config/filetlignux/background.jpg
 
 # Launch the Window Manager
-PATH=~/bin:${PATH} ~/.config/filetlignux/filetwm/cache/filet-wm/filetwm
+PATH=~/.local/bin:${PATH} ~/.config/filetlignux/filet-wm/filetwm

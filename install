@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-# Check dependencies
+
 printf "\n---- Checking dependencies ----\n"
 # Hard dependencies
 #  - slock,xbacklight,feh,alacritty,xsetroot: for filetwm (and default app)
@@ -13,21 +13,24 @@ for dep in $DEPS; do command -v $dep >/dev/null || exit 1; done
 for dep in $PRFS; do command -v $dep >/dev/null || \
 (read -p "Ignore (y)?"; test "$REPLY" == 'y' || exit 1;) done
 
-# Install base code.
+
+printf "\n---- Updating dependencies ----\n"
+git submodule update --init --depth=1
+
+
 printf "\n---- Installing codebase ----\n"
 mkdir -p ~/.config
-rsync -av --delete --exclude cache filetlignux/ ~/.config/filetlignux
+rsync -av --delete --exclude filetlignux/ ~/.config/filetlignux
+
 
 # Build all the things that need compiling or constructing.
 # Note that these won't get automatic updates:
-# neovim
-# You can force all updates with: rm -rf ~/.config/filetlignux/*/cache
-for build in filetwm mimi; do
+for build in filet-wm; do
 	printf "\n---- Building $build ----\n"
 	cd ~/.config/filetlignux/$build/; make all; cd -
 done
 
-# Installing home dir config files.
+
 printf "\n---- Linking HOME dir config files ----\n"
 while IFS= read -r file; do
 	dest=$(echo "$file" | sed -e 's:^.*/filetlignux/installs/::')
@@ -45,5 +48,6 @@ while IFS= read -r file; do
 		ln -s "$file" ~/"$dest"
 	fi
 done <<< $(find ~/.config/filetlignux/installs/ -type f -o -type l)
+
 
 printf "\n---- Done ----\n"
