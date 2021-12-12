@@ -20,16 +20,11 @@ git submodule update --init --depth=1
 
 printf "\n---- Installing codebase ----\n"
 mkdir -p ~/.config
-rsync -av --delete --exclude .git filetlignux/ ~/.config/filetlignux
+rsync -av --exclude .git filetlignux/ ~/.config/filetlignux
 
 
-# Build all the things that need compiling or constructing.
-# Note that these won't get automatic updates:
-for build in filet-wm; do
-	printf "\n---- Building $build ----\n"
-	cd ~/.config/filetlignux/$build/; make all; cd -
-done
-
+printf "\n---- Building packages ----\n"
+make -C ~/.config/filetlignux/filet-wm
 
 printf "\n---- Linking HOME dir config files ----\n"
 while IFS= read -r file; do
