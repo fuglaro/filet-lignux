@@ -1,9 +1,0 @@
-[submodule "filetlignux/neovim/plugins/start/nnn.vim"]
-	path = filetlignux/neovim/plugins/start/nnn.vim
-	url = https://github.com/luukvbaal/nnn.nvim
-[submodule "filetlignux/mimi"]
-	path = filetlignux/mimi
-	url = https://github.com/march-linux/mimi.git
-[submodule "filetlignux/filet-wm"]
-	path = filetlignux/filet-wm
-	url = https://github.com/fuglaro/filet-wm.git

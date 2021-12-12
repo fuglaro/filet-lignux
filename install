@@ -14,17 +14,28 @@ for dep in $PRFS; do command -v $dep >/dev/null || \
 (read -p "Ignore (y)?"; test "$REPLY" == 'y' || exit 1;) done
 
 
-printf "\n---- Updating dependencies ----\n"
-git submodule update --init --depth=1
-
-
 printf "\n---- Installing codebase ----\n"
 mkdir -p ~/.config
 rsync -av --exclude .git filetlignux/ ~/.config/filetlignux
+cd ~/.config/filetlignux
+
+
+printf "\n---- Updating dependencies ----\n"
+declare -A repos
+repos[neovim/plugins/start/nnn.vim]="https://github.com/luukvbaal/nnn.nvim"
+repos[mimi]="https://github.com/march-linux/mimi.git"
+repos[filet-wm]="https://github.com/fuglaro/filet-wm.git"
+for path in "${!repos[@]}"; do
+	if [[ ! -e $path ]]; then
+		git clone --depth=1 ${repos[$path]} $path
+	fi
+	git -C $path pull
+done
 
 
 printf "\n---- Building packages ----\n"
-make -C ~/.config/filetlignux/filet-wm
+make -C filet-wm
+
 
 printf "\n---- Linking HOME dir config files ----\n"
 while IFS= read -r file; do
