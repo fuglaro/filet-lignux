@@ -29,8 +29,9 @@ for path in "${!repos[@]}"; do
 	if [[ ! -e $path ]]; then
 		git clone --depth=1 ${repos[$path]} $path
 	fi
-	git -C $path pull
+	git -C $path pull &
 done
+wait
 
 
 printf "\n---- Building packages ----\n"
