@@ -71,3 +71,4 @@ We stand on the shoulders of giants. They own this, far more than I do.
 * https://github.com/jarun/nnn
 * https://github.com/savq/paq-nvim
 * https://github.com/luukvbaal/nnn.nvim
+* https://github.com/bluz71/vim-moonfly-colors
