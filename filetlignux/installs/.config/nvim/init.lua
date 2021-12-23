@@ -10,7 +10,7 @@ vim.opt.syntax = "on"
 vim.opt.termguicolors = true
 vim.cmd[[colorscheme moonfly]]
 vim.opt.statusline = "%{%&modified?'%#fzf3#':'%#TabLineSel#'%}▒█▙◣%t◢▟█▒"
-	.."%0*▒█▁%w%Y▁█▒ %<< %f >%= ↕ %=▔▜%#TermCursor#❨%c❩ %l/%L%0*▛▔"
+	.."%0*▒█▁%w%Y▁█▒ %=%<<%f>%= ↕ %=▔▜%#TermCursor#❨%c❩ %l/%L%0*▛▔"
 
 
 -- nnn - setup "Nav" vim-function for launching window to browse files and dirs
@@ -74,7 +74,6 @@ end
 -- treesitter and all languages
 -- markdown
 -- more menu options
--- completion options
 -- keyboard shortcut options
 
 
