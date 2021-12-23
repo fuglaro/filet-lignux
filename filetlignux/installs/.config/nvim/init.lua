@@ -8,6 +8,8 @@ vim.opt.splitbelow = true
 vim.opt.syntax = "on"
 vim.opt.termguicolors = true
 vim.cmd[[colorscheme moonfly]]
+vim.o.statusline = "%{%&modified?'%#FoldColumn#':'%#TabLineSel#'%}▒ %t ▒"
+	.."%0*▒ %w%Y ▒░ %<< %f >%= ﬡ %=░▒%c%l/%L▒"
 
 
 -- nnn - setup "Nav" vim-function for launching window to browse files and dirs
@@ -67,7 +69,6 @@ end
 
 -- TODO XXX
 -- preview mode split window management
--- pretty status line
 -- gitgutter
 -- treesitter and all languages
 -- markdown
