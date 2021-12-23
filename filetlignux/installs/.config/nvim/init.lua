@@ -9,7 +9,7 @@ vim.opt.splitbelow = true
 vim.opt.syntax = "on"
 vim.opt.termguicolors = true
 vim.cmd[[colorscheme moonfly]]
-vim.opt.statusline = "%{%&modified?'%#fzf3#':'%#TabLineSel#'%}▒█▙▁%t▁▟█▒"
+vim.opt.statusline = "%{%&modified?'%#fzf3#':'%#TabLineSel#'%}▒█▙◣%t◢▟█▒"
 	.."%0*▒█▁%w%Y▁█▒ %<< %f >%= ↕ %=▔▜%#TermCursor#❨%c❩ %l/%L%0*▛▔"
 
 
