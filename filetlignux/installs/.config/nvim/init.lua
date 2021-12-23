@@ -2,6 +2,7 @@
 vim.opt.tabstop = 2
 vim.opt.shiftwidth = 2
 vim.opt.colorcolumn = "80"
+vim.opt.wildmenu = true
 vim.opt.mouse = "nv"
 vim.opt.splitbelow = true
 vim.opt.syntax = "on"
@@ -64,8 +65,27 @@ function termLaunch()
 end
 
 
--- menu - setup "Menu" vim-function for launching a helper menu
 -- TODO XXX
+-- preview mode split window management
+-- pretty status line
+-- gitgutter
+-- treesitter and all languages
+-- markdown
+-- more menu options
+-- completion options
+
+
+-- menu - setup "Menu" vim-function for launching a helper menu
+vim.cmd[[
+source $VIMRUNTIME/menu.vim
+cnoremap <expr> <up> wildmenumode()? "\<left>":"\<up>"
+cnoremap <expr> <down> wildmenumode()? "\<right>":"\<down>"
+cnoremap <expr> <left> wildmenumode()? "\<up>":"\<left>"
+cnoremap <expr> <right> wildmenumode()? "\<down>":"\<right>"
+func Menu(...)
+	stopinsert
+	call feedkeys(":emenu \t", 't')
+endf]]
 
 
 -- tabline - launcher shortcuts and buffer tabs.
