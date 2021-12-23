@@ -2,14 +2,15 @@
 vim.opt.tabstop = 2
 vim.opt.shiftwidth = 2
 vim.opt.colorcolumn = "80"
+vim.opt.cursorline = true
 vim.opt.wildmenu = true
 vim.opt.mouse = "nv"
 vim.opt.splitbelow = true
 vim.opt.syntax = "on"
 vim.opt.termguicolors = true
 vim.cmd[[colorscheme moonfly]]
-vim.o.statusline = "%{%&modified?'%#FoldColumn#':'%#TabLineSel#'%}▒ %t ▒"
-	.."%0*▒ %w%Y ▒░ %<< %f >%= ﬡ %=░▒%c%l/%L▒"
+vim.opt.statusline = "%{%&modified?'%#fzf3#':'%#TabLineSel#'%}▒█▙▁%t▁▟█▒"
+	.."%0*▒█▁%w%Y▁█▒ %<< %f >%= ↕ %=▔▜%#TermCursor#❨%c❩ %l/%L%0*▛▔"
 
 
 -- nnn - setup "Nav" vim-function for launching window to browse files and dirs
@@ -74,6 +75,7 @@ end
 -- markdown
 -- more menu options
 -- completion options
+-- keyboard shortcut options
 
 
 -- menu - setup "Menu" vim-function for launching a helper menu
@@ -98,9 +100,9 @@ function tabline()
 		return s
 	end
 	-- launcher shortcuts
-	local r = '%#fzf1#'..'%0@Menu@'..S(' ')..'%#fzf2#'..'%0@Nav@'..S('ﱮ ')
-		..'%#fzf3#'..'%0@Term@'..S(' ')
-		..'%#InsertToggle#'..'%0@DoInsert@'..S('﫦')..'%<'
+	local r = '%#fzf1#'..'%0@Menu@'..S('≣')..'%#fzf2#'..'%0@Nav@'..S('+')
+		..'%#fzf3#'..'%0@Term@'..S('❱')
+		..'%#InsertToggle#'..'%0@DoInsert@'..S('I')..'%<'
 	-- buffer tabs
 	local wid = 50
 	for buf = 1, vim.fn.bufnr('$') do
@@ -109,8 +111,8 @@ function tabline()
 			local mod = vim.api.nvim_buf_get_option(buf, 'modified')
 			local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf), ':t')
 			r=r..(buf==bufn and'%#TabLineSel#%'or'%#TabLine#%')..buf..'@BufSel@'
-				..S(mod and''or'▌')..'%0.'..wid..'('..S(name)..'%)'..(buf==bufn and
-				(mod and'%#fzf3#%0@BufSave@'..S('')or'%#fzf1#%0@BufDel@'..S(''))or'')
+				..S(mod and'┣'or'┃')..'%0.'..wid..'('..S(name)..'%)'..(buf==bufn and
+				(mod and'%#fzf3#%0@BufSave@'..S('✎')or'%#fzf1#%0@BufDel@'..S('✖'))or'')
 
 				wid = buf<=bufn and 50 or c-1
 		end
