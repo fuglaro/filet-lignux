@@ -99,9 +99,9 @@ function tabline()
 		return s
 	end
 	-- launcher shortcuts
-	local r = '%#fzf1#'..'%0@Menu@'..S('≣')..'%#fzf2#'..'%0@Nav@'..S('+')
-		..'%#fzf3#'..'%0@Term@'..S('❱')
-		..'%#InsertToggle#'..'%0@DoInsert@'..S('I')..'%<%='
+	local r = '%#fzf1#'..'%0@Menu@'..S('≣')..'%#fzf3#'..'%0@Term@'..S('❱')
+		..'%#InsertToggle#'..'%0@DoInsert@'..S('I')..'%#fzf2#'..'%0@Nav@'..S('+')
+		..'%<%='
 	-- buffer tabs
 	local wid = 50
 	for buf = 1, vim.fn.bufnr('$') do
