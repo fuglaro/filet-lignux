@@ -70,7 +70,7 @@ end
 
 -- TODO XXX
 -- preview mode split window management
--- gitgutter
+-- gitgutter or https://github.com/lewis6991/gitsigns.nvim
 -- treesitter and all languages
 -- markdown
 -- more menu options
