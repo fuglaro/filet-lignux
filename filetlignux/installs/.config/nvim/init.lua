@@ -45,25 +45,25 @@ end
 
 -- term - setup "Term" vim-function for launching a terminal split.
 vim.cmd[[exe "func Term(...)\n lua termLaunch()\n endf"]]
-termBuf, termWin, termHeight = nil
+tBuf, tWin, tHeight = nil
 function termLaunch()
-	if not termWin and not termBuf then
-		vim.cmd[[bo split | exe "terminal" | set nobuflisted]]
-		termBuf = vim.api.nvim_get_current_buf()
-		termWin = vim.api.nvim_get_current_win()
+	if not tWin and not tBuf then
+		vim.cmd[[split | exe "terminal" | set nobuflisted]]
+		tBuf = vim.api.nvim_get_current_buf()
+		tWin = vim.api.nvim_get_current_win()
 		vim.cmd[[startinsert | au BufEnter <buffer> startinsert]]
 		vim.cmd[[au CursorMoved <buffer> startinsert]]
 		vim.cmd[[au BufLeave <buffer> stopinsert]]
 		vim.cmd[[au WinClosed <buffer> stopinsert]]
-		vim.cmd[[au BufEnter <buffer> if (winnr("$")==1) | q | endif]]
-	elseif not termWin then
-		vim.cmd[[bo split]]
-		vim.api.nvim_set_current_buf(termBuf)
-		termWin = vim.api.nvim_get_current_win()
-		vim.api.nvim_win_set_height(termWin, termHeight)
+		vim.cmd[[au BufEnter <buffer> if (winnr("$")==1) | q | endif]] -- XXX TODO handle unsaved buffers not allowing close and messing state
+	elseif not tWin or vim.fn.win_id2win(tWin)==0 or vim.fn.winnr('$')==1 then
+		vim.cmd[[split]]
+		vim.api.nvim_set_current_buf(tBuf)
+		tWin = vim.api.nvim_get_current_win()
+		pcall(vim.api.nvim_win_set_height, tWin, tHeight)
 	else
-		termHeight = vim.api.nvim_win_get_height(termWin)
-		termWin = vim.api.nvim_win_close(termWin, false)
+		tHeight = vim.api.nvim_win_get_height(tWin)
+		tWin = vim.api.nvim_win_close(tWin, false)
 	end
 end
 
@@ -117,12 +117,14 @@ function tabline()
 		end
 	end
 	-- end the tabline
-	return r..'%T%#TabLine#'..'▌'
+	return r
 end
 vim.cmd[[exe "func DoInsert(...)\n startinsert\n endf"]]
 vim.cmd[[exe "func BufSel(id,c,b,m)\n exe 'b'.a:id\n endf"]]
-vim.cmd[[exe "func BufDel(...)\n bd\n endf"]]
 vim.cmd[[exe "func BufSave(...)\n w\n endf"]]
+vim.cmd[[func BufDel(...)
+	exe "if len(getbufinfo({'buflisted':1}))==1\nqa\n else\n bn|bd#\n endif"
+endf"]]
 vim.cmd[[hi! def link InsertToggle TabLine]]
 vim.cmd[[au InsertEnter * hi! def link InsertToggle Search | redrawtabline]]
 vim.cmd[[au InsertLeave * hi! def link InsertToggle TabLine | redrawtabline]]
