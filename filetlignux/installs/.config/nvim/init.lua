@@ -9,8 +9,8 @@ vim.opt.splitbelow = true
 vim.opt.syntax = "on"
 vim.opt.termguicolors = true
 vim.cmd[[colorscheme moonfly]]
-vim.opt.statusline = "%{%&modified?'%#fzf3#':'%#TabLineSel#'%}▒█▙◣%t◢▟█▒"
-	.."%0*▒█▁%w%Y▁█▒ %=%<<%f>%= ↕ %=▔▜%#TermCursor#❨%c❩ %l/%L%0*▛▔"
+vim.opt.statusline = "%{%&modified?'%#fzf3#':'%#TabLineSel#'%}▔▜█▙ %t ▟█"
+	.."▙ %w%Y ▟█▛▔%0* %=%<<%f>%= ↕ %=▔▜%#TermCursor#❨%c❩ %l/%L%0*▛▔"
 
 
 -- nnn - setup "Nav" vim-function for launching window to browse files and dirs
@@ -55,12 +55,14 @@ function termLaunch()
 		vim.cmd[[au CursorMoved <buffer> startinsert]]
 		vim.cmd[[au BufLeave <buffer> stopinsert]]
 		vim.cmd[[au WinClosed <buffer> stopinsert]]
-		vim.cmd[[au BufEnter <buffer> if (winnr("$")==1) | q | endif]] -- XXX TODO handle unsaved buffers not allowing close and messing state
 	elseif not tWin or vim.fn.win_id2win(tWin)==0 or vim.fn.winnr('$')==1 then
 		vim.cmd[[split]]
 		vim.api.nvim_set_current_buf(tBuf)
 		tWin = vim.api.nvim_get_current_win()
 		pcall(vim.api.nvim_win_set_height, tWin, tHeight)
+	elseif tBuf ~= vim.fn.winbufnr(tWin) then
+		vim.api.nvim_set_current_win(tWin)
+		vim.api.nvim_set_current_buf(tBuf)
 	else
 		tHeight = vim.api.nvim_win_get_height(tWin)
 		tWin = vim.api.nvim_win_close(tWin, false)
@@ -72,9 +74,9 @@ end
 -- preview mode split window management
 -- gitgutter or https://github.com/lewis6991/gitsigns.nvim
 -- treesitter and all languages
--- markdown
 -- more menu options
 -- keyboard shortcut options
+-- help for custom keyboard shortcuts
 
 
 -- menu - setup "Menu" vim-function for launching a helper menu
@@ -100,7 +102,9 @@ function tabline()
 	end
 	-- launcher shortcuts
 	local r = '%#fzf1#'..'%0@Menu@'..S('≣')..'%#fzf3#'..'%0@Term@'..S('❱')
-		..'%#InsertToggle#'..'%0@DoInsert@'..S('I')..'%#fzf2#'..'%0@Nav@'..S('+')
+		..'%#InsertToggle#'..'%0@DoInsert@'..S('I')
+		..'%#fzf3#'..'%0@TwoPane@'..S('‖')
+		..'%#fzf2#'..'%0@Nav@'..S('+')
 		..'%<%='
 	-- buffer tabs
 	local wid = 50
@@ -123,8 +127,8 @@ vim.cmd[[exe "func DoInsert(...)\n startinsert\n endf"]]
 vim.cmd[[exe "func BufSel(id,c,b,m)\n exe 'b'.a:id\n endf"]]
 vim.cmd[[exe "func BufSave(...)\n w\n endf"]]
 vim.cmd[[func BufDel(...)
-	exe "if len(getbufinfo({'buflisted':1}))==1\nqa\n else\n bn|bd#\n endif"
-endf"]]
+	if len(getbufinfo({'buflisted':1}))==1 | qa | else | bn|bd# | endif
+endf]]
 vim.cmd[[hi! def link InsertToggle TabLine]]
 vim.cmd[[au InsertEnter * hi! def link InsertToggle Search | redrawtabline]]
 vim.cmd[[au InsertLeave * hi! def link InsertToggle TabLine | redrawtabline]]
