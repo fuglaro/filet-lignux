@@ -2,7 +2,6 @@
 vim.opt.tabstop = 2
 vim.opt.shiftwidth = 2
 vim.opt.colorcolumn = "80"
-vim.opt.cursorline = true
 vim.opt.wildmenu = true
 vim.opt.mouse = "nv"
 vim.opt.splitbelow = true
@@ -10,7 +9,7 @@ vim.opt.syntax = "on"
 vim.opt.termguicolors = true
 vim.cmd[[colorscheme moonfly]]
 vim.opt.statusline = "%{%&modified?'%#TabLineSel#':''%}█▙ %t ▟█"
-	.."▙ %w%Y ▟█%0* %=%<<%f>%= ↕ %=%#TermCursor# ❨%c❩ %l/%L "
+	.."%#TermCursor# %w%Y %0* %<<%f>%= ↕ %#TermCursor# ❨%c❩ %l/%L "
 
 
 -- nnn - setup "Nav" vim-function for launching window to browse files and dirs
@@ -101,10 +100,9 @@ function tabline()
 		return s
 	end
 	-- launcher shortcuts
-	local r = '%#InsertToggle#'..'%0@DoInsert@'..S('I')
-		..'%#String#'..'%0@Menu@'..S('≣')..'%#Function#'..'%0@Term@'..S('❱')
-		..'%#Float#'..'%0@TwoPane@'..S('‖')..'%#Keyword#'..'%0@Nav@'..S('+')
-		..'%#TabLine#'..'%<%='
+	local r = '%#TabLineSel#%0@Menu@'..S('≣')..'%0@DoInsert@'..S('I')..'%0@Term@'
+		..S('❱')..'%0@TwoPane@'..S('/')..'%0@Nav@%#TabLine#%=%#TabLineSel#'..S('+')
+		..'%<'
 	-- buffer tabs
 	local wid = 50
 	for buf = 1, vim.fn.bufnr('$') do
@@ -112,10 +110,9 @@ function tabline()
 			local bufn = vim.fn.bufnr()
 			local mod = vim.api.nvim_buf_get_option(buf, 'modified')
 			local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf), ':t')
-			r=r..(buf==bufn and'%#TabLineSel#%'or'%#TabLine#%')..buf..'@BufSel@'
+			r=r..'%'..buf..'@BufSel@'..(buf==bufn and'%#TabLineSel#'or'%#TabLine#')
 				..S(mod and'┣'or'┃')..'%0.'..wid..'('..S(name)..'%)'..(buf==bufn and
-				(mod and'%#Question#%0@BufSave@'..S('✎')
-					or'%#DiagnosticError#%0@BufDel@'..S('✖'))or'')
+				(mod and'%0@BufSave@'..S('✎')or'%0@BufDel@'..S('✖'))or'')
 				wid = buf<=bufn and 50 or c-1
 		end
 	end
@@ -128,9 +125,6 @@ vim.cmd[[exe "func BufSave(...)\n w\n endf"]]
 vim.cmd[[func BufDel(...)
 	if len(getbufinfo({'buflisted':1}))==1 | qa | else | bn|bd# | endif
 endf]]
-vim.cmd[[hi! def link InsertToggle TabLine]]
-vim.cmd[[au InsertEnter * hi! def link InsertToggle Search | redrawtabline]]
-vim.cmd[[au InsertLeave * hi! def link InsertToggle TabLine | redrawtabline]]
 vim.opt.tabline = [[%!v:lua.tabline()]]
 vim.opt.showtabline = 2
 
