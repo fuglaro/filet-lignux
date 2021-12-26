@@ -69,7 +69,8 @@ end
 
 -- TODO XXX
 -- preview mode split window management
--- gitgutter or https://github.com/lewis6991/gitsigns.nvim
+-- https://github.com/lewis6991/gitsigns.nvim and menu/launcher/shortcuts
+-- telescope and menu/launcher/shortcuts
 -- treesitter and all languages
 -- more menu options
 -- keyboard shortcut options
