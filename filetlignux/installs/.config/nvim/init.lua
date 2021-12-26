@@ -81,14 +81,22 @@ end
 
 
 -- TODO XXX 
--- preview mode split window management
 -- https://github.com/lewis6991/gitsigns.nvim and menu/launcher/shortcuts
 -- telescope and menu/launcher/shortcuts
 -- treesitter and all languages
 -- more menu options
 --  - Project Open (cd wildmenu)
+--  - Edit.Save As (w wildmenu)
+--  - Edit.Input Mode (startinput)
+--  - Window.Toggle Additional Pane (Two Pane)
+--  - File.Open (Nav)
+--  - Window.Toggle Terminal Pane (Term)
 -- keyboard shortcut options
--- help for custom keyboard shortcuts
+-- help
+--  - in help menu and help pages
+--  - for custom keyboard shortcuts
+--  - launcher shortcuts
+--  - nnn guide / reference
 
 
 -- menu - setup "Menu" vim-function for launching a helper menu
