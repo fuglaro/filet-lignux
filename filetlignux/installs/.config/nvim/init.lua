@@ -1,4 +1,5 @@
 
+vim.opt.compatible = false
 vim.opt.tabstop = 2
 vim.opt.shiftwidth = 2
 vim.opt.colorcolumn = "80"
@@ -70,13 +71,15 @@ end
 
 
 -- two-pane - helper to manage split windows
-tpWin = nil
+tpWin, tpWidth = nil
 vim.cmd[[exe "func TwoPane(...)\n lua twoPane()\n endf"]]
 function twoPane()
 	if not tpWin or vim.fn.win_id2win(tpWin)==0 then
 		vim.cmd[[bo vsplit]]
 		tpWin = vim.api.nvim_get_current_win()
+		pcall(vim.api.nvim_win_set_width, tpWin, tpWidth)
 	else
+		tpWidth = vim.api.nvim_win_get_width(tpWin)
 		tpWin = vim.api.nvim_win_close(tpWin, false)
 	end
 end
@@ -99,19 +102,15 @@ end
 --  - for custom keyboard shortcuts
 --  - launcher shortcuts
 --  - nnn guide / reference
-
+-- tab highlighting
 
 -- menu - setup "Menu" vim-function for launching a helper menu
-vim.cmd[[
-source $VIMRUNTIME/menu.vim
+vim.cmd[[source $VIMRUNTIME/menu.vim
 cnoremap <expr> <up> wildmenumode()? "\<left>":"\<up>"
 cnoremap <expr> <down> wildmenumode()? "\<right>":"\<down>"
 cnoremap <expr> <left> wildmenumode()? "\<up>":"\<left>"
 cnoremap <expr> <right> wildmenumode()? "\<down>":"\<right>"
-func Menu(...)
-	stopinsert
-	call feedkeys(":emenu \t", 't')
-endf]]
+exe "func Menu(...)\n stopinsert | call feedkeys(':emenu \t', 't')\n endf"]]
 
 
 -- tabline - launcher shortcuts and buffer tabs.
