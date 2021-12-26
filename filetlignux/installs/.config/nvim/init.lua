@@ -21,7 +21,7 @@ nnnBuf, nnnWin = nil
 nnnOpen = vim.fn.tempname()
 function nnnLaunch()
 	local winStyle = {style = "minimal", relative = "editor", row = 1, col = 0,
-		width = 48, height = vim.api.nvim_get_option("lines")-2}
+		width = 64, height = vim.api.nvim_get_option("lines")-2}
 	if not nnnBuf then
 		nnnBuf = vim.api.nvim_create_buf(false, true)
 		nnnWin = vim.api.nvim_open_win(nnnBuf, true, winStyle)
@@ -112,6 +112,7 @@ menu Edit.Insert\ Mode :startinsert<CR>
 menu File.Save\ As :call feedkeys(":w \t", "t")<CR>
 menu Window.Toggle\ Other\ Pane :call TwoPane()<CR>
 menu Window.Toggle\ Terminal :call Term()<CR>
+menu Help.NNN\ File\ Browser :call Nav()<CR>?
 ]]
 
 
