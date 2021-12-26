@@ -88,13 +88,14 @@ end
 -- TODO XXX 
 -- telescope and menu/launcher/shortcuts
 -- keyboard shortcut options
+--  - Ctrl+j - switch in and back from terminal pane (creating if needed)
+--  - Ctrl+k - switch in and back from other pane (creating if needed)
+--  - Ctrl+PgUp/PgDown - switch buffers in pane
 -- help
 --  - in help menu and help pages
 --  - for custom keyboard shortcuts
 --  - launcher shortcuts
---  - nnn guide / reference - direct to ? in nnn
---  - gitgutter guide and shortcuts
--- tab highlighting
+--  - gitsigns guide and shortcuts
 -- treesitter and all languages
 
 
