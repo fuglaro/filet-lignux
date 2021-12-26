@@ -67,12 +67,13 @@ function termLaunch()
 end
 
 
--- TODO XXX
+-- TODO XXX 
 -- preview mode split window management
 -- https://github.com/lewis6991/gitsigns.nvim and menu/launcher/shortcuts
 -- telescope and menu/launcher/shortcuts
 -- treesitter and all languages
 -- more menu options
+--  - Project Open (cd wildmenu)
 -- keyboard shortcut options
 -- help for custom keyboard shortcuts
 
