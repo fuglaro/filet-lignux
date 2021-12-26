@@ -86,23 +86,17 @@ end
 
 
 -- TODO XXX 
--- https://github.com/lewis6991/gitsigns.nvim and menu/launcher/shortcuts
 -- telescope and menu/launcher/shortcuts
--- treesitter and all languages
--- more menu options
---  - Project Open (cd wildmenu)
---  - Edit.Save As (w wildmenu)
---  - Edit.Input Mode (startinput)
---  - Window.Toggle Additional Pane (Two Pane)
---  - File.Open (Nav)
---  - Window.Toggle Terminal Pane (Term)
 -- keyboard shortcut options
 -- help
 --  - in help menu and help pages
 --  - for custom keyboard shortcuts
 --  - launcher shortcuts
---  - nnn guide / reference
+--  - nnn guide / reference - direct to ? in nnn
+--  - gitgutter guide and shortcuts
 -- tab highlighting
+-- treesitter and all languages
+
 
 -- menu - setup "Menu" vim-function for launching a helper menu
 vim.cmd[[source $VIMRUNTIME/menu.vim
