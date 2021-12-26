@@ -19,7 +19,7 @@ nnnOpen = vim.fn.tempname()
 function nnnLaunch()
 	local winStyle = {style = "minimal", relative = "editor", row = 1, col = 0,
 		width = 48, height = vim.api.nvim_get_option("lines")-2}
-	if not nnnWin and not nnnBuf then
+	if not nnnBuf then
 		nnnBuf = vim.api.nvim_create_buf(false, true)
 		nnnWin = vim.api.nvim_open_win(nnnBuf, true, winStyle)
 		vim.fn.termopen("nnn -G -p "..nnnOpen, {
@@ -30,8 +30,7 @@ function nnnLaunch()
 					vim.cmd("edit "..vim.fn.fnameescape(file))
 				end
 			end})
-		vim.cmd[[startinsert | au BufEnter <buffer> startinsert]]
-		vim.cmd[[au CursorMoved <buffer> startinsert]]
+		vim.cmd[[startinsert | au BufEnter,CursorMoved <buffer> startinsert]]
 		vim.cmd[[au BufLeave <buffer> stopinsert | call Nav()]]
 		vim.cmd[[au WinClosed <buffer> stopinsert]]
 	elseif not nnnWin then
@@ -46,14 +45,13 @@ end
 vim.cmd[[exe "func Term(...)\n lua termLaunch()\n endf"]]
 tBuf, tWin, tHeight = nil
 function termLaunch()
-	if not tWin and not tBuf then
+	if not tBuf then
 		vim.cmd[[split | exe "terminal" | set nobuflisted]]
 		tBuf = vim.api.nvim_get_current_buf()
 		tWin = vim.api.nvim_get_current_win()
-		vim.cmd[[startinsert | au BufEnter <buffer> startinsert]]
-		vim.cmd[[au CursorMoved <buffer> startinsert]]
-		vim.cmd[[au BufLeave <buffer> stopinsert]]
-		vim.cmd[[au WinClosed <buffer> stopinsert]]
+		vim.cmd[[startinsert | au BufEnter,CursorMoved <buffer> startinsert]]
+		vim.cmd[[au BufLeave,WinClosed <buffer> stopinsert]]
+		vim.cmd[[au BufUnload <buffer> lua tBuf = nil]]
 	elseif not tWin or vim.fn.win_id2win(tWin)==0 or vim.fn.winnr('$')==1 then
 		vim.cmd[[split]]
 		vim.api.nvim_set_current_buf(tBuf)
