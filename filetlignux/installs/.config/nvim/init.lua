@@ -2,6 +2,7 @@
 vim.opt.tabstop = 2
 vim.opt.shiftwidth = 2
 vim.opt.colorcolumn = "80"
+vim.opt.number = true
 vim.opt.wildmenu = true
 vim.opt.mouse = "nv"
 vim.opt.splitbelow = true
@@ -10,6 +11,7 @@ vim.opt.termguicolors = true
 vim.cmd[[colorscheme moonfly]]
 vim.opt.statusline = "%{%&modified?'%#TabLineSel#':''%}█▙ %t ▟█"
 	.."%#TermCursor# %w%Y %0* %<<%f>%= ↕ %#TermCursor# ❨%c❩ %l/%L "
+require('gitsigns').setup({signcolumn=false, numhl=true})
 
 
 -- nnn - setup "Nav" vim-function for launching window to browse files and dirs
@@ -121,9 +123,9 @@ function tabline()
 		return s
 	end
 	-- launcher shortcuts
-	local r = '%#TabLineSel#%0@Menu@'..S('≣')..'%0@DoInsert@'..S('I')..'%0@Term@'
-		..S('❱')..'%0@TwoPane@'..S('/')..'%0@Nav@%#TabLine#%=%#TabLineSel#'..S('+')
-		..'%<'
+	local r = '%#TabLineSel#%0@Menu@'..S('≣')..'%0@DoInsert@'..S('I')
+		..'%0@MGit@'..S('G')..'%0@Term@'..S('❱')..'%0@TwoPane@'..S('/')
+		..'%0@Nav@%#TabLine#%=%#TabLineSel#'..S('+') ..'%<'
 	-- buffer tabs
 	local wid = 50
 	for buf = 1, vim.fn.bufnr('$') do
@@ -140,10 +142,11 @@ function tabline()
 	-- end the tabline
 	return r
 end
-vim.cmd[[exe "func DoInsert(...)\n startinsert\n endf"]]
-vim.cmd[[exe "func BufSel(id,c,b,m)\n exe 'b'.a:id\n endf"]]
-vim.cmd[[exe "func BufSave(...)\n w\n endf"]]
-vim.cmd[[func BufDel(...)
+vim.cmd[[exe "func DoInsert(...)\n startinsert\n endf"
+exe "func MGit(...)\n stopinsert | call feedkeys(':Gitsigns \t', 't')\n endf"
+exe "func BufSel(id,c,b,m)\n exe 'b'.a:id\n endf"
+exe "func BufSave(...)\n w\n endf"
+func BufDel(...)
 	if len(getbufinfo({'buflisted':1}))==1 | qa | else | bn|bd# | endif
 endf]]
 vim.opt.tabline = [[%!v:lua.tabline()]]

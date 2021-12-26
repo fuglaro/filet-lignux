@@ -23,6 +23,8 @@ cd ~/.config/filetlignux
 printf "\n---- Updating dependencies ----\n"
 declare -A repos
 repos[neovim/plugins/start/vim-moonfly-colors]="bluz71/vim-moonfly-colors"
+repos[neovim/plugins/start/plenary.nvim]="nvim-lua/plenary.nvim"
+repos[neovim/plugins/start/gitsigns.nvim]="lewis6991/gitsigns.nvim"
 repos[mimi]="march-linux/mimi"
 repos[filet-wm]="fuglaro/filet-wm"
 for path in "${!repos[@]}"; do
