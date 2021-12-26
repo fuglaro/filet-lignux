@@ -110,7 +110,15 @@ cnoremap <expr> <up> wildmenumode()? "\<left>":"\<up>"
 cnoremap <expr> <down> wildmenumode()? "\<right>":"\<down>"
 cnoremap <expr> <left> wildmenumode()? "\<up>":"\<left>"
 cnoremap <expr> <right> wildmenumode()? "\<down>":"\<right>"
-exe "func Menu(...)\n stopinsert | call feedkeys(':emenu \t', 't')\n endf"]]
+exe "func Menu(...)\n stopinsert | call feedkeys(':emenu \t', 't')\n endf"
+menu .5 File.Project :call feedkeys(":cd \t", "t")<CR>
+menu File.Save\ As :call feedkeys(":w \t", "t")<CR>
+menu File.Open :call Nav()<CR>
+menu Edit.Insert\ Mode :startinsert<CR>
+menu File.Save\ As :call feedkeys(":w \t", "t")<CR>
+menu Window.Toggle\ Other\ Pane :call TwoPane()<CR>
+menu Window.Toggle\ Terminal :call Term()<CR>
+]]
 
 
 -- tabline - launcher shortcuts and buffer tabs.
