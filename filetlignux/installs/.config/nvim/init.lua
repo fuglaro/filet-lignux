@@ -67,6 +67,19 @@ function termLaunch()
 end
 
 
+-- two-pane - helper to manage split windows
+tpWin = nil
+vim.cmd[[exe "func TwoPane(...)\n lua twoPane()\n endf"]]
+function twoPane()
+	if not tpWin or vim.fn.win_id2win(tpWin)==0 then
+		vim.cmd[[bo vsplit]]
+		tpWin = vim.api.nvim_get_current_win()
+	else
+		tpWin = vim.api.nvim_win_close(tpWin, false)
+	end
+end
+
+
 -- TODO XXX 
 -- preview mode split window management
 -- https://github.com/lewis6991/gitsigns.nvim and menu/launcher/shortcuts
