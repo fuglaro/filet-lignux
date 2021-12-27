@@ -6,7 +6,7 @@ printf "\n---- Checking dependencies ----\n"
 #  - slock,xbacklight,feh,alacritty,xsetroot: for filetwm (and default app)
 DEPS="slock feh xbacklight alacritty xsetroot make gcc busybox rsync wget"
 # Preferred applications
-PRFS="mupdf vlc nvim tmux nnn"
+PRFS="mupdf vlc nvim tmux nnn ripgrep"
 for dep in $DEPS; do command -v $dep >/dev/null || echo "need: $dep"; done
 for dep in $PRFS; do command -v $dep >/dev/null || echo "suggested: $dep"; done
 for dep in $DEPS; do command -v $dep >/dev/null || exit 1; done

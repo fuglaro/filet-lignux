@@ -86,21 +86,12 @@ end
 
 
 -- TODO XXX 
--- telescope and menu/launcher/shortcuts
--- keyboard shortcut options
---  - Ctrl+j - switch in and back from terminal pane (creating if needed)
---  - Ctrl+k - switch in and back from other pane (creating if needed)
---  - Ctrl+PgUp/PgDown - switch buffers in pane
--- help
---  - in help menu and help pages
---  - for custom keyboard shortcuts
---  - launcher shortcuts
---  - gitsigns guide and shortcuts
--- treesitter and all languages
+-- telescope and menu/launcher/shortcuts/help
+-- treesitter and languages
 
 
 -- menu - setup "Menu" vim-function for launching a helper menu
-vim.cmd[[source $VIMRUNTIME/menu.vim
+vim.cmd([[source $VIMRUNTIME/menu.vim
 cnoremap <expr> <up> wildmenumode()? "\<left>":"\<up>"
 cnoremap <expr> <down> wildmenumode()? "\<right>":"\<down>"
 cnoremap <expr> <left> wildmenumode()? "\<up>":"\<left>"
@@ -114,7 +105,9 @@ menu File.Save\ As :call feedkeys(":w \t", "t")<CR>
 menu Window.Toggle\ Other\ Pane :call TwoPane()<CR>
 menu Window.Toggle\ Terminal :call Term()<CR>
 menu Help.NNN\ File\ Browser :call Nav()<CR>?
-]]
+menu Help.GitSigns :e ]]
+	..[[~/.local/share/nvim/site/pack/*/start/gitsigns.nvim/doc/gitsigns.txt<CR>
+]])
 
 
 -- tabline - launcher shortcuts and buffer tabs.
