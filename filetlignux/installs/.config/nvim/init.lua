@@ -5,6 +5,7 @@ vim.opt.shiftwidth = 2
 vim.opt.colorcolumn = "80"
 vim.opt.number = true
 vim.opt.wildmenu = true
+vim.opt.wildmode = "longest:full"
 vim.opt.mouse = "nv"
 vim.opt.splitbelow = true
 vim.opt.syntax = "on"
@@ -86,7 +87,6 @@ end
 
 
 -- TODO XXX 
--- telescope and menu/launcher/shortcuts/help
 -- treesitter and languages
 
 
@@ -100,14 +100,15 @@ exe "func Menu(...)\n stopinsert | call feedkeys(':emenu \t', 't')\n endf"
 menu .5 File.Project :call feedkeys(":cd \t", "t")<CR>
 menu File.Save\ As :call feedkeys(":w \t", "t")<CR>
 menu File.Open :call Nav()<CR>
-menu Edit.Insert\ Mode :startinsert<CR>
 menu File.Save\ As :call feedkeys(":w \t", "t")<CR>
+menu Edit.Insert\ Mode :startinsert<CR>
+menu 35. Plugin.GitSigns :call feedkeys(":Gitsigns \t", "t")<CR>
+menu Plugin.Telescope :call feedkeys(":Telescope \t", "t")<CR>
 menu Window.Toggle\ Other\ Pane :call TwoPane()<CR>
 menu Window.Toggle\ Terminal :call Term()<CR>
 menu Help.NNN\ File\ Browser :call Nav()<CR>?
-menu Help.GitSigns :e ]]
-	..[[~/.local/share/nvim/site/pack/*/start/gitsigns.nvim/doc/gitsigns.txt<CR>
-]])
+menu Help.GitSigns :help gitsigns<CR>
+menu Help.Telescope :help telescope<CR>?]])
 
 
 -- tabline - launcher shortcuts and buffer tabs.
@@ -120,8 +121,8 @@ function tabline()
 	end
 	-- launcher shortcuts
 	local r = '%#TabLineSel#%0@Menu@'..S('≣')..'%0@DoInsert@'..S('I')
-		..'%0@MGit@'..S('G')..'%0@Term@'..S('❱')..'%0@TwoPane@'..S('/')
-		..'%0@Nav@%#TabLine#%=%#TabLineSel#'..S('+') ..'%<'
+		..'%0@MGit@'..S('G')..'%0@Search@'..S('S')..'%0@Term@'..S('❱')
+		..'%0@TwoPane@'..S('/')..'%0@Nav@%#TabLine#%=%#TabLineSel#'..S('+') ..'%<'
 	-- buffer tabs
 	local wid = 50
 	for buf = 1, vim.fn.bufnr('$') do
@@ -140,6 +141,7 @@ function tabline()
 end
 vim.cmd[[exe "func DoInsert(...)\n startinsert\n endf"
 exe "func MGit(...)\n stopinsert | call feedkeys(':Gitsigns \t', 't')\n endf"
+exe "func Search(...)\n Telescope live_grep\n endf"
 exe "func BufSel(id,c,b,m)\n exe 'b'.a:id\n endf"
 exe "func BufSave(...)\n w\n endf"
 func BufDel(...)
