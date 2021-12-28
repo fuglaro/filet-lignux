@@ -86,10 +86,6 @@ function twoPane()
 end
 
 
--- TODO XXX 
--- treesitter and languages
-
-
 -- menu - setup "Menu" vim-function for launching a helper menu
 vim.cmd([[source $VIMRUNTIME/menu.vim
 cnoremap <expr> <up> wildmenumode()? "\<left>":"\<up>"
