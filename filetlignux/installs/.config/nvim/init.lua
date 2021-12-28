@@ -26,7 +26,7 @@ function nnnLaunch()
 	if not nnnBuf then
 		nnnBuf = vim.api.nvim_create_buf(false, true)
 		nnnWin = vim.api.nvim_open_win(nnnBuf, true, winStyle)
-		vim.fn.termopen("nnn -G -p "..nnnOpen, {
+		vim.fn.termopen("nnn -p "..nnnOpen, {
 			on_exit = function(id, code)
 				nnnWin = vim.api.nvim_win_close(nnnWin, false)
 				nnnBuf = vim.api.nvim_buf_delete(nnnBuf, {})
@@ -97,7 +97,7 @@ cnoremap <expr> <down> wildmenumode()? "\<right>":"\<down>"
 cnoremap <expr> <left> wildmenumode()? "\<up>":"\<left>"
 cnoremap <expr> <right> wildmenumode()? "\<down>":"\<right>"
 exe "func Menu(...)\n stopinsert | call feedkeys(':emenu \t', 't')\n endf"
-menu .5 File.Project :call feedkeys(":cd \t", "t")<CR>
+menu .5 File.Open\ Project :call feedkeys(":cd \t", "t")<CR>
 menu File.Save\ As :call feedkeys(":w \t", "t")<CR>
 menu File.Open :call Nav()<CR>
 menu File.Save\ As :call feedkeys(":w \t", "t")<CR>
