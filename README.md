@@ -27,7 +27,7 @@ cd filet-lignux
 ./install
 ```
 
-To also install the mouse keys, this must be installed to the system via sudo:
+To also install the mouse keys (capslock becomes left-click, etc) and make filet-lignux selectable in the display mangager, components must be installed to the system via sudo:
 
 ```bash
 sudo ./sysinstall
