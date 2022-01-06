@@ -40,13 +40,10 @@ sudo ./sysinstall
 
 # Future Considerations
 * ? alacritty doesn't work on oneplus6T(postmarketos)
-* neovim configuration
-  * https://github.com/rockerBOO/awesome-neovim/blob/main/README.md#preconfigured-configuration
-  * file browser: https://github.com/luukvbaal/nnn.nvim
+* nvim configuration for syntax highlighting in 16 color terminals isn't beautiful
 * better theme for gtk-x
 * enhance xdg_open settings
 * put prefered application launcher wrappers in the bin folder.
-* add gif demoing customisations snd desktop features.
 
 # Thanks to, grateful forks, and contributions
 
