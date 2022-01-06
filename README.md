@@ -35,7 +35,7 @@ sudo ./sysinstall
 ## Launching
 
 ```bash
-~/.config/filetlignux/start
+startx ~/.config/filetlignux/start
 ```
 
 # Future Considerations
