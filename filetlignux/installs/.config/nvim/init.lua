@@ -11,8 +11,8 @@ vim.opt.splitbelow = true
 vim.opt.syntax = "on"
 vim.opt.termguicolors = true
 vim.cmd[[colorscheme moonfly]]
-vim.opt.statusline = "%{%&modified?'%#TabLineSel#':''%}█▙ %t ▟█"
-	.."%#TermCursor# %w%Y %0* %<<%f>%= ↕ %#TermCursor# ❨%c❩ %l/%L "
+vim.opt.statusline = "%{%&modified?'%#TabLineSel#':''%}██ %t ██"
+	.."%#TermCursor# %w%Y %0*%<<%f>%= %#TermCursor# %l/%L(%c) "
 require('gitsigns').setup({signcolumn=false, numhl=true})
 
 
@@ -116,8 +116,8 @@ function tabline()
 		return s
 	end
 	-- launcher shortcuts
-	local r = '%#TabLineSel#%0@Menu@'..S('≣')..'%0@DoInsert@'..S('I')
-		..'%0@MGit@'..S('G')..'%0@Search@'..S('S')..'%0@Term@'..S('❱')
+	local r = '%#TabLineSel#%0@Menu@'..S('M')..'%0@DoInsert@'..S('I')
+		..'%0@MGit@'..S('G')..'%0@Search@'..S('S')..'%0@Term@'..S('>')
 		..'%0@TwoPane@'..S('/')..'%0@Nav@%#TabLine#%=%#TabLineSel#'..S('+') ..'%<'
 	-- buffer tabs
 	local wid = 50
@@ -128,7 +128,7 @@ function tabline()
 			local name = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf), ':t')
 			r=r..'%'..buf..'@BufSel@'..(buf==bufn and'%#TabLineSel#'or'%#TabLine#')
 				..S(mod and'┣'or'┃')..'%0.'..wid..'('..S(name)..'%)'..(buf==bufn and
-				(mod and'%0@BufSave@'..S('✎')or'%0@BufDel@'..S('✖'))or'')
+				(mod and'%0@BufSave@'..S(' !')or'%0@BufDel@'..S(' x'))or'')
 				wid = buf<=bufn and 50 or c-1
 		end
 	end
