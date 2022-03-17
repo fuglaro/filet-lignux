@@ -75,7 +75,7 @@ end
 tpWin, tpWidth = nil
 vim.cmd[[exe "func TwoPane(...)\n lua twoPane()\n endf"]]
 function twoPane()
-	if not tpWin or vim.fn.win_id2win(tpWin)==0 then
+	if not tpWin or vim.fn.win_id2win(tpWin)==0 or vim.fn.winnr('$')==1 then
 		vim.cmd[[bo vsplit]]
 		tpWin = vim.api.nvim_get_current_win()
 		pcall(vim.api.nvim_win_set_width, tpWin, tpWidth)
