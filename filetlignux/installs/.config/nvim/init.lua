@@ -10,8 +10,8 @@ vim.opt.mouse = "nv"
 vim.opt.splitbelow = true
 vim.opt.syntax = "on"
 vim.cmd[[set list listchars=tab:\⏐\ ,trail:‹]]
-vim.opt.termguicolors = true
-vim.cmd[[colorscheme moonfly]]
+vim.cmd[[colorscheme torte]]
+vim.cmd[[highlight Pmenu ctermfg=white ctermbg=black]]
 vim.opt.statusline = "%{%&modified?'%#TabLineSel#':''%}██ %t ██"
 	.."%#TermCursor# %w%Y %0*%<<%f>%= %#TermCursor# %l/%L(%c) "
 require('gitsigns').setup({signcolumn=false, numhl=true})
@@ -22,8 +22,8 @@ vim.cmd[[exe "func Nav(...)\n lua nnnLaunch()\n endf"]]
 nnnBuf, nnnWin = nil
 nnnOpen = vim.fn.tempname()
 function nnnLaunch()
-	local winStyle = {style = "minimal", relative = "editor", row = 1, col = 0,
-		width = 64, height = vim.api.nvim_get_option("lines")-2}
+	local winStyle = {style="minimal", relative="editor", row=1, col=0,
+		width=64, height=vim.api.nvim_get_option("lines")-2, border="solid"}
 	if not nnnBuf then
 		nnnBuf = vim.api.nvim_create_buf(false, true)
 		nnnWin = vim.api.nvim_open_win(nnnBuf, true, winStyle)
