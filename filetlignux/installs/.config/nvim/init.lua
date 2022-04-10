@@ -9,6 +9,7 @@ vim.opt.wildmode = "longest:full"
 vim.opt.mouse = "nv"
 vim.opt.splitbelow = true
 vim.opt.syntax = "on"
+vim.cmd[[set list listchars=tab:\⏐\ ,trail:‹]]
 vim.opt.termguicolors = true
 vim.cmd[[colorscheme moonfly]]
 vim.opt.statusline = "%{%&modified?'%#TabLineSel#':''%}██ %t ██"
