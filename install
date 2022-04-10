@@ -2,16 +2,12 @@
 
 
 printf "\n---- Checking dependencies ----\n"
-# Hard dependencies
+# Dependencies and prefered applications
 #  - slock,xbacklight,amixer,feh,alacritty,xsetroot: for filetwm (and default apps)
-DEPS="slock feh xbacklight amixer alacritty xsetroot make gcc busybox rsync wget"
-# Preferred applications
-PRFS="mupdf vlc nvim tmux nnn rg fd"
-for dep in $DEPS; do command -v $dep >/dev/null || echo "need: $dep"; done
-for dep in $PRFS; do command -v $dep >/dev/null || echo "suggested: $dep"; done
-for dep in $DEPS; do command -v $dep >/dev/null || exit 1; done
-for dep in $PRFS; do command -v $dep >/dev/null || \
-(read -p "Ignore (y)?"; test "$REPLY" == 'y' || exit 1;) done
+DEPS="slock feh xbacklight amixer alacritty xsetroot make gcc busybox rsync wget mupdf vlc nvim tmux nnn rg fd"
+FAIL="0"
+for dep in $DEPS; do command -v $dep >/dev/null || echo "need: $dep" && FAIL="1"; done
+test "$FAIL" == "0" || read -p "Ignore (y)?" && test "$REPLY" == 'y' || exit 1
 
 
 printf "\n---- Installing codebase ----\n"
@@ -22,7 +18,6 @@ cd ~/.config/filetlignux
 
 printf "\n---- Updating dependencies ----\n"
 declare -A repos
-repos[neovim/plugins/start/vim-moonfly-colors]="bluz71/vim-moonfly-colors"
 repos[neovim/plugins/start/plenary.nvim]="nvim-lua/plenary.nvim"
 repos[neovim/plugins/start/gitsigns.nvim]="lewis6991/gitsigns.nvim"
 repos[neovim/plugins/start/telescope.nvim]="nvim-telescope/telescope.nvim"
