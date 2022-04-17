@@ -5,9 +5,9 @@ printf "\n---- Checking dependencies ----\n"
 # Dependencies and prefered applications
 #  - slock,xbacklight,amixer,feh,alacritty,xsetroot: for filetwm (and default apps)
 DEPS="slock feh xbacklight amixer alacritty xsetroot make gcc busybox rsync wget mupdf vlc nvim tmux nnn rg fd"
-FAIL="0"
-for dep in $DEPS; do command -v $dep >/dev/null || echo "need: $dep" && FAIL="1"; done
-test "$FAIL" == "0" || read -p "Ignore (y)?" && test "$REPLY" == 'y' || exit 1
+FAIL=$(for dep in $DEPS; do command -v $dep >/dev/null || (echo "need: $dep"); done)
+echo "$FAIL"
+test "$FAIL" == '' || (read -p "Ignore (y)?" && (test "$REPLY" == 'y' || exit 1))
 
 
 printf "\n---- Installing codebase ----\n"
