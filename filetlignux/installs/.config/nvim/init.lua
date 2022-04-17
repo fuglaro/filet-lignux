@@ -10,7 +10,6 @@ vim.opt.mouse = "nv"
 vim.opt.splitbelow = true
 vim.opt.syntax = "on"
 vim.cmd[[set list listchars=tab:\⏐\ ,trail:‹]]
-vim.cmd[[colorscheme torte]]
 vim.cmd[[highlight Pmenu ctermfg=white ctermbg=black]]
 vim.opt.statusline = "%{%&modified?'%#TabLineSel#':''%}██ %t ██"
 	.."%#TermCursor# %w%Y %0*%<<%f>%= %#TermCursor# %l/%L(%c) "
