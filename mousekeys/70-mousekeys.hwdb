@@ -1,16 +1,17 @@
 # Install to /etc/udev/hwdb.d/70-mouse-keys.hwdb (may need reboot)
-# sudo udevadm hwdb --update
-# sudo udevadm trigger
+# sudo udevadm hwdb --update && sudo udevadm trigger
+# (or sudo systemd-hwdb update && sudo udevadm trigger )
 # add to /etc/rc.local if doesnt persist after reboot.
 # This maps the following keys to mouse buttons.
 #   Caps  -> MouseLeft
 #   AltGr -> MouseMiddle
 #   Menu  -> MouseRight
-# Every laptop's trackpad mouse button system that I have ever used should
-# be ashamed of itself. Trackpads along with replacing the CapsLock key with
+# Every laptop's trackpad mouse button system that I have ever used falls
+# short of excellence. Trackpads paired with replacing the CapsLock key with
 # LeftButton is a thing of beauty and this is here until the world realises
 # something along these lines.
 # https://wiki.archlinux.org/index.php/Map_scancodes_to_keycodes
+# Use sudo evtest to check scancodes.
 
 evdev:input:*
  KEYBOARD_KEY_70039=btn_left
